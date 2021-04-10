@@ -7,12 +7,15 @@ import (
 )
 
 const (
-	JOINOK    = "JOINOK"
-	PONG      = "PONG"
-	POOLSTEPS = "POOLSTEPS"
+	JOINOK     = "JOINOK"
+	PASSFAILED = "PASSFAILED"
+	PAYMENTOK  = "PAYMENTOK"
+	PONG       = "PONG"
+	POOLSTEPS  = "POOLSTEPS"
+	STEPOK     = "STEPOK"
 )
 
-func Parse(comms Comms, resp string) {
+func Parse(comms *Comms, resp string) {
 	r := strings.Split(resp, " ")
 
 	switch r[0] {
@@ -20,15 +23,21 @@ func Parse(comms Comms, resp string) {
 		comms.PoolAddr <- r[1]
 		comms.MinerSeed <- r[2]
 		poolData(comms, r, 2)
+	case PASSFAILED:
+		fmt.Println("Incorrect password")
+	case PAYMENTOK:
+	case PONG:
+		// Ignore, maybe log?
 	case POOLSTEPS:
 		poolData(comms, r, 0)
-	case PONG:
+	case STEPOK:
+		fmt.Println("Step solution accepted by pool")
 	default:
 		fmt.Printf("Uknown response code: %s\n", r[0])
 	}
 }
 
-func poolData(comms Comms, resp []string, offset int) {
+func poolData(comms *Comms, resp []string, offset int) {
 	targetBlock, err := strconv.Atoi(resp[2+offset])
 	if err != nil {
 		fmt.Printf("Error converting target block: %s\n", resp[2+offset])

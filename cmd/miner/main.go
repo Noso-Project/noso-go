@@ -28,15 +28,7 @@ func main() {
 
 	client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
 
-	comms := miner.Comms{
-		PoolAddr:     make(chan string, 0),
-		MinerSeed:    make(chan string, 0),
-		TargetBlock:  make(chan int, 0),
-		TargetString: make(chan string, 0),
-		TargetChars:  make(chan int, 0),
-		CurrentStep:  make(chan int, 0),
-		Hashes:       make(chan int, 0),
-	}
+	comms := miner.NewComms()
 
 	for {
 		select {
