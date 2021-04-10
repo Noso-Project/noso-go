@@ -1,15 +1,13 @@
-package tcplib
+package miner
 
 import (
 	"bufio"
 	"fmt"
 	"net"
 	"time"
-
-	"github.com/leviable/noso-go/internal/miner"
 )
 
-func NewTcpClient(opts *miner.Opts) *TcpClient {
+func NewTcpClient(opts *Opts) *TcpClient {
 	client := &TcpClient{
 		addr:      fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
 		auth:      fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),

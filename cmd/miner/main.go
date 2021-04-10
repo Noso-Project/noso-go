@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/leviable/noso-go/internal/miner"
-	"github.com/leviable/noso-go/internal/tcplib"
 )
 
 const (
@@ -24,7 +23,7 @@ func main() {
 		totalHashes  int
 	)
 	opts := miner.GetOpts()
-	client := tcplib.NewTcpClient(opts)
+	client := miner.NewTcpClient(opts)
 	fmt.Printf("Client: %+v\n", client)
 
 	client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
