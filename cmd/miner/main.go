@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/leviable/noso-go/internal/opts"
+	"github.com/leviable/noso-go/internal/miner"
 	"github.com/leviable/noso-go/internal/tcplib"
 )
 
@@ -11,13 +11,6 @@ const (
 	minerVer = "go-miner-0-1-0"
 	// minerVer = "1.65"
 )
-
-type Comms struct {
-	currentBlock chan int
-	targetBlock  chan int
-	currentStep  chan int
-	hashes       chan int
-}
 
 func main() {
 	var (
@@ -28,17 +21,17 @@ func main() {
 		// currentStep   int
 		// minerHashRate int
 	)
-	opts := opts.GetOpts()
+	opts := miner.GetOpts()
 	client := tcplib.NewTcpClient(opts)
 	fmt.Printf("Client: %+v\n", client)
 
 	client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
 
-	comms := Comms{
-		currentBlock: make(chan int, 0),
-		targetBlock:  make(chan int, 0),
-		currentStep:  make(chan int, 0),
-		hashes:       make(chan int, 0),
+	comms := miner.Comms{
+		CurrentBlock: make(chan int, 0),
+		TargetBlock:  make(chan int, 0),
+		CurrentStep:  make(chan int, 0),
+		Hashes:       make(chan int, 0),
 	}
 
 	for {
@@ -48,10 +41,7 @@ func main() {
 		// case currentStep <- currentStepChan:
 		// case minerHashRate <- hashRateChan:
 		case resp = <-client.RecvChan:
-			parse(comms, resp)
+			miner.Parse(comms, resp)
 		}
 	}
-}
-
-func parse(comms Comms, resp string) {
 }
