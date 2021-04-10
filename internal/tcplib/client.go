@@ -48,8 +48,8 @@ func (t *TcpClient) send() {
 	for {
 		select {
 		case msg := <-t.SendChan:
+			fmt.Printf("-> %s\n", msg)
 			msg = fmt.Sprintf("%s %s\n", t.auth, msg)
-			fmt.Printf("-> %s", msg)
 			fmt.Fprintf(t.conn, msg)
 		}
 	}

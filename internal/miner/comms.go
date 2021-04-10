@@ -1,8 +1,11 @@
 package miner
 
 type Comms struct {
-	CurrentBlock chan int
+	PoolAddr     chan string
+	MinerSeed    chan string
 	TargetBlock  chan int
+	TargetString chan string
+	TargetChars  chan int
 	CurrentStep  chan int
 	Hashes       chan int
 }
