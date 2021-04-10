@@ -20,6 +20,7 @@ func NewTcpClient(opts *opts.Opts) *TcpClient {
 
 	go client.send()
 	go client.recv()
+	go client.ping()
 
 	return client
 }
@@ -36,10 +37,12 @@ type TcpClient struct {
 func (t *TcpClient) send() {
 	if t.conn == nil {
 		t.conn, _ = net.DialTimeout("tcp", t.addr, 5*time.Second)
+		// TODO: figure out what to do on error
+		// TODO: figure out reconnecting
 		// if err != nil {
 		// 	return err
 		// }
-		t.connected <- struct{}{}
+		close(t.connected)
 	}
 
 	for {
@@ -55,6 +58,23 @@ func (t *TcpClient) send() {
 func (t *TcpClient) recv() {
 	// Block until connection established
 	<-t.connected
+	scanner := bufio.NewScanner(t.conn)
+	for scanner.Scan() {
+		resp := scanner.Text()
+		fmt.Print("<- " + resp + "\n")
+		t.RecvChan <- resp
+	}
+}
+
+func (t *TcpClient) ping() {
+	// Block until connection established
+	<-t.connected
+	for {
+		select {
+		case <-time.After(5 * time.Second):
+			t.SendChan <- "PING 1"
+		}
+	}
 	scanner := bufio.NewScanner(t.conn)
 	for scanner.Scan() {
 		resp := scanner.Text()

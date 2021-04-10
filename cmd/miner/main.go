@@ -8,13 +8,20 @@ import (
 )
 
 const (
-	// minerVer = "go-miner-0-1-0"
-	minerVer = "1.65"
+	minerVer = "go-miner-0-1-0"
+	// minerVer = "1.65"
 )
+
+type Comms struct {
+	currentBlock chan int
+	targetBlock  chan int
+	currentStep  chan int
+	hashes       chan int
+}
 
 func main() {
 	var (
-		resp_raw string
+		resp string
 		// err           error
 		// currentBlock  int
 		// targetBlock   int
@@ -27,14 +34,24 @@ func main() {
 
 	client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
 
+	comms := Comms{
+		currentBlock: make(chan int, 0),
+		targetBlock:  make(chan int, 0),
+		currentStep:  make(chan int, 0),
+		hashes:       make(chan int, 0),
+	}
+
 	for {
 		select {
 		// case currentBlock <- currentBlockChan:
 		// case targetBlock <- targetBlockChan:
 		// case currentStep <- currentStepChan:
 		// case minerHashRate <- hashRateChan:
-		case resp_raw = <-client.RecvChan:
-			fmt.Println(resp_raw)
+		case resp = <-client.RecvChan:
+			parse(comms, resp)
 		}
 	}
+}
+
+func parse(comms Comms, resp string) {
 }
