@@ -27,12 +27,12 @@ func Parse(comms *Comms, resp string) {
 		comms.PoolAddr <- r[1]
 		comms.MinerSeed <- r[2]
 		poolData(comms, r, 2)
-		close(comms.Joined)
+		comms.Joined <- struct{}{}
 	case PASSFAILED:
 		fmt.Println("Incorrect password")
 	case PAYMENTOK:
 	case PONG:
-		comms.Pong <- struct{}{}
+		// NoOp
 	case POOLSTEPS:
 		poolData(comms, r, 0)
 	case STEPOK:

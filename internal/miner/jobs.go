@@ -47,6 +47,8 @@ func JobFeeder(comms *Comms) {
 								Step:         currentStep,
 							}
 							select {
+							case poolAddr = <-comms.NewPoolAddr:
+							case minerSeed = <-comms.NewMinerSeed:
 							case targetChars = <-comms.NewChars:
 								job.TargetChars = targetChars
 							case targetBlock = <-comms.NewBlock:

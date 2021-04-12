@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	minerVer = "go-miner-0-1-0"
+	minerVer = "noso-go-0-1-0"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 
 	opts := miner.GetOpts()
 	comms := miner.NewComms()
-	client := miner.NewTcpClient(opts, comms)
+	client := miner.NewTcpClient(minerVer, opts, comms)
 
 	// TODO: Need to handle join failures / fail-overs
 	// client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)

@@ -13,7 +13,7 @@ func NewComms() *Comms {
 		Jobs:         make(chan Job, 0),
 		Reports:      make(chan Report, 0),
 		Solutions:    make(chan Solution, 0),
-		Pong:         make(chan interface{}, 0),
+		Joined:       make(chan struct{}, 0),
 		NewChars:     make(chan int, 0),
 		NewBlock:     make(chan int, 0),
 		NewStep:      make(chan int, 0),
@@ -35,8 +35,7 @@ type Comms struct {
 	Jobs         chan Job
 	Reports      chan Report
 	Solutions    chan Solution
-	Pong         chan interface{}
-	Joined       chan interface{}
+	Joined       chan struct{}
 
 	// For communicating with the jobFeeder goroutine
 	NewChars     chan int
