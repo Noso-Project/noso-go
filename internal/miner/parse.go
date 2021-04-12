@@ -16,6 +16,10 @@ const (
 )
 
 func Parse(comms *Comms, resp string) {
+	if resp == "" {
+		fmt.Println("Got an empty response")
+		return
+	}
 	r := strings.Split(resp, " ")
 
 	switch r[0] {
@@ -23,15 +27,17 @@ func Parse(comms *Comms, resp string) {
 		comms.PoolAddr <- r[1]
 		comms.MinerSeed <- r[2]
 		poolData(comms, r, 2)
+		close(comms.Joined)
 	case PASSFAILED:
 		fmt.Println("Incorrect password")
 	case PAYMENTOK:
 	case PONG:
-		// Ignore, maybe log?
+		comms.Pong <- struct{}{}
 	case POOLSTEPS:
 		poolData(comms, r, 0)
 	case STEPOK:
 		fmt.Println("Step solution accepted by pool")
+		comms.StepSolved <- 1
 	default:
 		fmt.Printf("Uknown response code: %s\n", r[0])
 	}

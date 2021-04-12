@@ -2,6 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
+	_ "net/http/pprof"
 
 	"github.com/leviable/noso-go/internal/miner"
 )
@@ -13,40 +19,79 @@ const (
 func main() {
 	var (
 		// err          error
-		resp         string
+
+		// last response from pool
+		resp string
+
+		// state vars
+		start        time.Time
 		poolAddr     string
 		minerSeed    string
 		targetBlock  int
 		targetString string
 		targetChars  int
 		currentStep  int
-		totalHashes  int
+		stepsSolved  int
+
+		// hash rate info
+		totalHashes int
+		hashRate    int
 	)
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	opts := miner.GetOpts()
-	client := miner.NewTcpClient(opts)
-	fmt.Printf("Client: %+v\n", client)
-
-	client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
-
 	comms := miner.NewComms()
+	client := miner.NewTcpClient(opts, comms)
+
+	// TODO: Need to handle join failures / fail-overs
+	// client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
+
+	// Start the job feeder goroutine
+	go miner.JobFeeder(comms)
+
+	// Start the miner goroutines
+	ready := make(chan bool, 0)
+	for x := 1; x <= opts.Cpu; x++ {
+		go miner.Miner(strconv.Itoa(x), comms, ready)
+	}
+
+	// TODO: Need to do a sync broadcast for ready
+	go func() {
+		for targetChars == 0 || targetBlock == 0 || targetString == "" {
+			time.Sleep(100 * time.Millisecond)
+		}
+		close(ready)
+	}()
+
+	start = time.Now()
 
 	for {
 		select {
 		case poolAddr = <-comms.PoolAddr:
-			fmt.Printf("PoolAddress is %s\n", poolAddr)
+			comms.NewPoolAddr <- poolAddr
 		case minerSeed = <-comms.MinerSeed:
-			fmt.Printf("minerSeed is %s\n", minerSeed)
+			comms.NewMinerSeed <- minerSeed
 		case targetBlock = <-comms.TargetBlock:
-			fmt.Printf("Target block is %d\n", targetBlock)
+			comms.NewBlock <- targetBlock
 		case targetString = <-comms.TargetString:
-			fmt.Printf("Target string is %s\n", targetString)
+			comms.NewString <- targetString
 		case targetChars = <-comms.TargetChars:
-			fmt.Printf("Target chars are %d\n", targetChars)
+			comms.NewChars <- targetChars
 		case currentStep = <-comms.CurrentStep:
-			fmt.Printf("Current step is %d\n", currentStep)
-		case hashes := <-comms.Hashes:
-			totalHashes += hashes
-			fmt.Printf("Current hashes is %d\n", totalHashes)
+			comms.NewStep <- currentStep
+		case <-comms.StepSolved:
+			stepsSolved += 1
+			fmt.Printf("Miner has solved %d steps\n", stepsSolved)
+		case report := <-comms.Reports:
+			// TODO: do rolling average instead of all time
+			totalHashes += report.Hashes
+			timeSince := time.Since(start)
+			dur := float64(timeSince) / float64(time.Second)
+			hashRate = int(float64(totalHashes) / dur)
+			comms.HashRate <- hashRate
 		case resp = <-client.RecvChan:
 			go miner.Parse(comms, resp)
 		}
