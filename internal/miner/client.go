@@ -13,9 +13,9 @@ func NewTcpClient(minerVer string, opts *Opts, comms *Comms) *TcpClient {
 		comms:     comms,
 		addr:      fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
 		auth:      fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),
-		SendChan:  make(chan string, 0),
-		RecvChan:  make(chan string, 0),
-		connected: make(chan interface{}, 0),
+		SendChan:  make(chan string, 10),
+		RecvChan:  make(chan string, 10),
+		connected: make(chan interface{}, 10),
 	}
 
 	go client.manager()
@@ -46,13 +46,13 @@ type managerComms struct {
 
 func NewManagerComms() *managerComms {
 	return &managerComms{
-		connected:    make(chan struct{}, 0),
-		disconnected: make(chan struct{}, 0),
-		stop:         make(chan struct{}, 0),
-		joined:       make(chan struct{}, 0),
-		sendStopped:  make(chan struct{}, 0),
-		recvStopped:  make(chan struct{}, 0),
-		pingStopped:  make(chan struct{}, 0),
+		connected:    make(chan struct{}, 10),
+		disconnected: make(chan struct{}, 10),
+		stop:         make(chan struct{}, 10),
+		joined:       make(chan struct{}, 10),
+		sendStopped:  make(chan struct{}, 10),
+		recvStopped:  make(chan struct{}, 10),
+		pingStopped:  make(chan struct{}, 10),
 	}
 }
 

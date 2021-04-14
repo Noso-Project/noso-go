@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 
+	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/leviable/noso-go/internal/miner"
@@ -31,6 +31,7 @@ func main() {
 		targetString string
 		targetChars  int
 		currentStep  int
+		currentDiff  int
 		stepsSolved  int
 
 		// hash rate info
@@ -50,7 +51,12 @@ func main() {
 	// client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
 
 	// Start the job feeder goroutine
-	go miner.JobFeeder(comms)
+	jobComms := miner.NewJobComms()
+	go miner.JobFeeder(comms, jobComms)
+
+	// Start the Solutions Manager goroutine
+	solComms := miner.NewSolutionComms(client.SendChan)
+	go miner.SolutionManager(solComms)
 
 	// Start the miner goroutines
 	ready := make(chan bool, 0)
@@ -68,23 +74,33 @@ func main() {
 
 	start = time.Now()
 
+	// TODO: Sending individual info (block, chars, string, etc
+	//       will probably lead to a race condition. Send a
+	//       BlockUpdate struct instead with all info?
 	for {
 		select {
 		case poolAddr = <-comms.PoolAddr:
-			comms.NewPoolAddr <- poolAddr
+			jobComms.PoolAddr <- poolAddr
 		case minerSeed = <-comms.MinerSeed:
-			comms.NewMinerSeed <- minerSeed
-		case targetBlock = <-comms.TargetBlock:
-			comms.NewBlock <- targetBlock
+			jobComms.MinerSeed <- minerSeed
 		case targetString = <-comms.TargetString:
-			comms.NewString <- targetString
+			jobComms.TargetString <- targetString
 		case targetChars = <-comms.TargetChars:
-			comms.NewChars <- targetChars
-		case currentStep = <-comms.CurrentStep:
-			comms.NewStep <- currentStep
+			jobComms.TargetChars <- targetChars
+		case targetBlock = <-comms.Block:
+			jobComms.Block <- targetBlock
+			solComms.Block <- targetBlock
+		case currentStep = <-comms.Step:
+			jobComms.Step <- currentStep
+			solComms.Step <- currentStep
+		case currentDiff = <-comms.Diff:
+			jobComms.Diff <- currentDiff
+			solComms.Diff <- currentDiff
 		case <-comms.StepSolved:
 			stepsSolved += 1
 			fmt.Printf("Miner has solved %d steps\n", stepsSolved)
+		case sol := <-comms.Solutions:
+			solComms.Solution <- sol
 		case report := <-comms.Reports:
 			// TODO: do rolling average instead of all time
 			totalHashes += report.Hashes

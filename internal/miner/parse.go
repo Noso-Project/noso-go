@@ -29,7 +29,7 @@ func Parse(comms *Comms, resp string) {
 		poolData(comms, r, 2)
 		comms.Joined <- struct{}{}
 	case PASSFAILED:
-		fmt.Println("Incorrect password")
+		fmt.Println("Incorrect pool password")
 	case PAYMENTOK:
 	case PONG:
 		// NoOp
@@ -44,11 +44,11 @@ func Parse(comms *Comms, resp string) {
 }
 
 func poolData(comms *Comms, resp []string, offset int) {
-	targetBlock, err := strconv.Atoi(resp[2+offset])
+	block, err := strconv.Atoi(resp[2+offset])
 	if err != nil {
 		fmt.Printf("Error converting target block: %s\n", resp[2+offset])
 	} else {
-		comms.TargetBlock <- targetBlock
+		comms.Block <- block
 	}
 
 	comms.TargetString <- resp[3+offset]
@@ -60,10 +60,17 @@ func poolData(comms *Comms, resp []string, offset int) {
 		comms.TargetChars <- targetChars
 	}
 
-	currentStep, err := strconv.Atoi(resp[5+offset])
+	step, err := strconv.Atoi(resp[5+offset])
 	if err != nil {
 		fmt.Printf("Error converting target chars: %s\n", resp[5+offset])
 	} else {
-		comms.CurrentStep <- currentStep
+		comms.Step <- step
+	}
+
+	diff, err := strconv.Atoi(resp[6+offset])
+	if err != nil {
+		fmt.Printf("Error converting target chars: %s\n", resp[6+offset])
+	} else {
+		comms.Diff <- diff
 	}
 }
