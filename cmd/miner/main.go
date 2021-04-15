@@ -16,20 +16,28 @@ func main() {
 		resp string
 
 		// state vars
-		start        time.Time
-		poolAddr     string
-		minerSeed    string
-		targetBlock  int
-		targetString string
-		targetChars  int
-		currentStep  int
-		currentDiff  int
-		stepsSolved  int
+		start             time.Time
+		poolAddr          string
+		minerSeed         string
+		targetBlock       int
+		targetString      string
+		targetChars       int
+		currentStep       int
+		currentDiff       int
+		stepsSolved       int
+		blocksTillPayment int
+		balance           string
+		paymentRequested  time.Time
 
 		// hash rate info
 		totalHashes int
 		hashRate    int
 	)
+
+	// Set a date in the past so we can request payment immediately if we
+	// have a vested balance
+	balance = "0"
+	paymentRequested = time.Now().Add(-3 * time.Hour)
 
 	opts := miner.GetOpts()
 	comms := miner.NewComms()
@@ -81,6 +89,15 @@ func main() {
 		case currentDiff = <-comms.Diff:
 			jobComms.Diff <- currentDiff
 			solComms.Diff <- currentDiff
+		case balance = <-comms.Balance:
+		case blocksTillPayment = <-comms.BlocksTillPayment:
+			// If we have a non-zero balance
+			// And our balance is fully vested
+			// And we haven't requested payment in at least 10 minutes
+			if balance != "0" && blocksTillPayment > 0 && time.Since(paymentRequested) > 10*time.Minute {
+				client.SendChan <- "PAYMENT"
+				paymentRequested = time.Now()
+			}
 		case <-comms.StepSolved:
 			stepsSolved += 1
 			fmt.Printf("Miner has solved %d steps\n", stepsSolved)

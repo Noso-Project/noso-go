@@ -73,4 +73,13 @@ func poolData(comms *Comms, resp []string, offset int) {
 	} else {
 		comms.Diff <- diff
 	}
+
+	comms.Balance <- resp[7+offset]
+
+	blocksTillPayment, err := strconv.Atoi(resp[8+offset])
+	if err != nil {
+		fmt.Printf("Error converting target chars: %s\n", resp[8+offset])
+	} else {
+		comms.BlocksTillPayment <- blocksTillPayment
+	}
 }
