@@ -4,10 +4,10 @@ import "fmt"
 
 func NewSolutionComms(sendChan chan string) *SolutionComms {
 	return &SolutionComms{
-		Block:    make(chan int, 10),
-		Step:     make(chan int, 10),
-		Diff:     make(chan int, 10),
-		Solution: make(chan Solution, 10),
+		Block:    make(chan int, 0),
+		Step:     make(chan int, 0),
+		Diff:     make(chan int, 0),
+		Solution: make(chan Solution, 0),
 		SendChan: sendChan,
 	}
 }
@@ -22,7 +22,7 @@ type SolutionComms struct {
 
 type Solution struct {
 	Seed    string
-	HashNum int
+	HashStr string
 	Block   int
 	Chars   int
 	Step    int
@@ -71,9 +71,9 @@ func SolutionManager(solComms *SolutionComms) {
 			// Send any stored solutions that meet this criteria
 			if sols, ok := storedSols[charsCurr]; ok {
 				for _, s := range sols {
-					solComms.SendChan <- fmt.Sprintf("STEP %d %s %d", s.Block, s.Seed, s.HashNum)
+					solComms.SendChan <- fmt.Sprintf("STEP %d %s %s", s.Block, s.Seed, s.HashStr)
 				}
-				storedSols[charsCurr] = make([]Solution, 10)
+				storedSols[charsCurr] = make([]Solution, 0)
 			}
 		case sol = <-solComms.Solution:
 			fmt.Printf("Solution is: %+v\n", sol)
@@ -88,10 +88,11 @@ func SolutionManager(solComms *SolutionComms) {
 				continue
 			} else if step < charsChg && sol.Chars < charsLrg {
 				// Found a future solution, store it
+				// Should only store maybe 12 max
 				storedSols[sol.Chars] = append(storedSols[sol.Chars], sol)
 			} else {
 				// Any solution that gets here is valid: send it
-				solComms.SendChan <- fmt.Sprintf("STEP %d %s %d", sol.Block, sol.Seed, sol.HashNum)
+				solComms.SendChan <- fmt.Sprintf("STEP %d %s %s", sol.Block, sol.Seed, sol.HashStr)
 			}
 		}
 	}

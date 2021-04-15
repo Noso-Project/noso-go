@@ -47,9 +47,6 @@ func main() {
 	comms := miner.NewComms()
 	client := miner.NewTcpClient(minerVer, opts, comms)
 
-	// TODO: Need to handle join failures / fail-overs
-	// client.SendChan <- fmt.Sprintf("JOIN %s", minerVer)
-
 	// Start the job feeder goroutine
 	jobComms := miner.NewJobComms()
 	go miner.JobFeeder(comms, jobComms)

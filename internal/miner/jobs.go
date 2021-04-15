@@ -1,18 +1,19 @@
 package miner
 
 import (
+	"strconv"
 	"strings"
 )
 
 func NewJobComms() *JobComms {
 	return &JobComms{
-		PoolAddr:     make(chan string, 10),
-		MinerSeed:    make(chan string, 10),
-		Block:        make(chan int, 10),
-		Step:         make(chan int, 10),
-		Diff:         make(chan int, 10),
-		TargetChars:  make(chan int, 10),
-		TargetString: make(chan string, 10),
+		PoolAddr:     make(chan string, 0),
+		MinerSeed:    make(chan string, 0),
+		Block:        make(chan int, 0),
+		Step:         make(chan int, 0),
+		Diff:         make(chan int, 0),
+		TargetChars:  make(chan int, 0),
+		TargetString: make(chan string, 0),
 	}
 }
 
@@ -27,14 +28,16 @@ type JobComms struct {
 }
 
 type Job struct {
-	PoolAddr     string
-	Seed         string
-	TargetString string
-	TargetChars  int
-	Diff         int
-	Block        int
-	Step         int
-	Start, Stop  int
+	PoolAddr      string
+	SeedMiner     string
+	SeedPostfix   string
+	SeedFull      string
+	SeedFullBytes []byte
+	TargetString  string
+	TargetChars   int
+	Diff          int
+	Block         int
+	Step          int
 }
 
 func JobFeeder(comms *Comms, jobComms *JobComms) {
@@ -48,12 +51,13 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 		targetString string
 		job          Job
 		running      bool
+		postfix      string
 	)
 
 	// Step is the only int that can actually be 0
 	step = -1
 
-	ready := make(chan struct{}, 10)
+	ready := make(chan struct{}, 0)
 
 	// This is pretty ugly, there has to be a better way
 	go func() {
@@ -93,14 +97,30 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 
 	<-ready
 
+	// ! is 33
+	// % is 37
+	// ( is 40
+	// _ is 95
+	// _ and ( are reserved chars, skip them
+	// Wallet doesn't like %, skip it
+
 	for {
 		for x := 0; x < 92; x++ {
+			if x == 4 || x == 7 || x == 62 {
+				continue
+			}
 			for y := 0; y < 92; y++ {
+				if y == 4 || y == 7 || y == 62 {
+					continue
+				}
 				for z := 0; z < 92; z++ {
+					if z == 4 || z == 7 || z == 62 {
+						continue
+					}
 					seedBase := minerSeed[:len(minerSeed)-3]
-					seedX := string(rune('!' + x))
-					seedY := string(rune('!' + y))
-					seedZ := string(rune('!' + z))
+					seedX := string('!' + x)
+					seedY := string('!' + y)
+					seedZ := string('!' + z)
 					seed := seedBase + seedX + seedY + seedZ
 
 					// "_" and "(" are reserved characters in Noso
@@ -109,18 +129,22 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 					}
 
 					for num := 1; num < 9999; num++ {
+						postfix = "gm010" + strconv.Itoa(num)
 						running = true
+						fullSeed := seed + poolAddr + postfix
+						fullSeedBytes := []byte(fullSeed)
 						for running {
 							job = Job{
-								Start:        num * 1000000,
-								Stop:         (num * 1000000) + 999999,
-								TargetString: strings.ToLower(targetString),
-								TargetChars:  targetChars,
-								Diff:         diff,
-								Block:        block,
-								Seed:         seed,
-								PoolAddr:     poolAddr,
-								Step:         step,
+								TargetString:  strings.ToLower(targetString),
+								TargetChars:   targetChars,
+								Diff:          diff,
+								Block:         block,
+								SeedMiner:     seed,
+								SeedPostfix:   postfix,
+								SeedFull:      fullSeed,
+								SeedFullBytes: fullSeedBytes,
+								PoolAddr:      poolAddr,
+								Step:          step,
 							}
 							select {
 							case poolAddr = <-jobComms.PoolAddr:
