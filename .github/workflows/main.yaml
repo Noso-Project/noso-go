@@ -68,12 +68,9 @@ jobs:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
       - name: Package
-        run: |
-          cd binaries
-          zip ../go-miner-${{ github.event.ref }}.zip ./*
-      - name: Cut Release
+        run: make zip
+      - name: Upload Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             go-miner*.zip

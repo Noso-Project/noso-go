@@ -25,6 +25,12 @@ $(APP)-macos:
 $(APP).exe:
 	GOOS=windows GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
+$(APP)-$(TAG).zip:
+	(cd binaries && zip ../$@ ./*)
+
+.PHONY: zip
+zip: $(APP)-$(TAG).zip
+
 .PHONY: clean
 clean:
 	rm -f $(APP).exe
