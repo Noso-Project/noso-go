@@ -31,10 +31,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
-      - name: Run -h
+      - name: Run basic commands
         run: |
           chmod a+x binaries/go-miner-linux
           binaries/go-miner-linux -h
+          binaries/go-miner-linux -version
 
   test-windows:
     name: Test Windows
@@ -43,9 +44,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
-      - name: Run -h
+      - name: Run basic commands
         run: |
           binaries/go-miner.exe -h
+          binaries/go-miner.exe -version
 
   test-macos:
     name: Test Mac OS
@@ -54,10 +56,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
-      - name: Run -h
+      - name: Run basic commands
         run: |
           chmod a+x binaries/go-miner-macos
           binaries/go-miner-macos -h
+          binaries/go-miner-macos -version
 
   cut-release:
     if: contains(github.ref, '/tags/v')

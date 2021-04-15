@@ -1,7 +1,9 @@
 package miner
 
 import (
-	"strconv"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"strings"
 )
 
@@ -54,7 +56,9 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 		postfix      string
 	)
 
-	ver := MinerName
+	verSha := sha256.Sum256([]byte(MinerName))
+	verShaHex := hex.EncodeToString(verSha[:])
+	ver := verShaHex[:2]
 
 	// Step is the only int that can actually be 0
 	step = -1
@@ -130,8 +134,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 						continue
 					}
 
-					for num := 1; num < 9999; num++ {
-						postfix = ver + strconv.Itoa(num)
+					for num := 1; num < 999; num++ {
+						postfix = ver + fmt.Sprintf("%03d", num)
 						running = true
 						fullSeed := seed + poolAddr + postfix
 						fullSeedBytes := []byte(fullSeed)
