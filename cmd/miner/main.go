@@ -2,18 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
-	"net/http"
-	_ "net/http/pprof"
-
 	"github.com/leviable/noso-go/internal/miner"
-)
-
-const (
-	minerVer = "noso-go-0-1-0"
 )
 
 func main() {
@@ -39,13 +31,9 @@ func main() {
 		hashRate    int
 	)
 
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
 	opts := miner.GetOpts()
 	comms := miner.NewComms()
-	client := miner.NewTcpClient(minerVer, opts, comms)
+	client := miner.NewTcpClient(opts, comms)
 
 	// Start the job feeder goroutine
 	jobComms := miner.NewJobComms()

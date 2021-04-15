@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-func NewTcpClient(minerVer string, opts *Opts, comms *Comms) *TcpClient {
+func NewTcpClient(opts *Opts, comms *Comms) *TcpClient {
 	client := &TcpClient{
-		minerVer:  minerVer,
+		minerVer:  MinerName,
 		comms:     comms,
 		addr:      fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
 		auth:      fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),

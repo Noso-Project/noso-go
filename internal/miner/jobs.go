@@ -54,6 +54,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 		postfix      string
 	)
 
+	ver := MinerName
+
 	// Step is the only int that can actually be 0
 	step = -1
 
@@ -129,7 +131,7 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 					}
 
 					for num := 1; num < 9999; num++ {
-						postfix = "gm010" + strconv.Itoa(num)
+						postfix = ver + strconv.Itoa(num)
 						running = true
 						fullSeed := seed + poolAddr + postfix
 						fullSeedBytes := []byte(fullSeed)

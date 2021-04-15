@@ -16,6 +16,7 @@ type Opts struct {
 }
 
 func GetOpts() *Opts {
+	ver := flag.Bool("version", false, "Print version and exit")
 	ipAddr := flag.String("addr", "", "IP address of Noso Pool")
 	ipPort := flag.Int("port", 8082, "IP port of the Noso Pool. Defaults to 8082")
 	poolPw := flag.String("password", "", "Password for the NosoPool")
@@ -24,7 +25,10 @@ func GetOpts() *Opts {
 
 	flag.Parse()
 
-	if *ipAddr == "" {
+	if *ver {
+		fmt.Printf("Version: %s\n", Version)
+		os.Exit(0)
+	} else if *ipAddr == "" {
 		fmt.Println("-addr cannot be blank")
 		os.Exit(1)
 	} else if *poolPw == "" {
