@@ -1,1 +1,1 @@
-# noso-go
+# Noso Coin Miner
