@@ -17,16 +17,14 @@ jobs:
         run: make all
 
       - name: Copy out example bat
-        run: cp examples/go-miner.bat .
+        run: cp examples/go-miner-*.bat .
 
       - uses: actions/upload-artifact@v2
         with:
           name: binaries
           path: |
             go-miner-*
-            go-miner.exe
             README.md
-            go-miner.bat
 
   test-linux:
     name: Test Linux
@@ -48,10 +46,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
-      - name: Run basic commands
+      - name: Run basic commands - 64 Bit
         run: |
-          binaries/go-miner.exe -h
-          binaries/go-miner.exe -version
+          binaries/go-miner-64.exe -h
+          binaries/go-miner-64.exe -version
+      - name: Run basic commands - 32 Bit
+        run: |
+          binaries/go-miner-32.exe -h
+          binaries/go-miner-32.exe -version
 
   test-macos:
     name: Test Mac OS
