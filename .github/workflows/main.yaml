@@ -63,7 +63,7 @@ jobs:
           binaries/go-miner-macos -version
 
   test-arm:
-    name: Test ARM binaries exist
+    name: Test ARM
     runs-on: ubuntu-latest
     needs: build
     steps:
