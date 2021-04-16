@@ -2,11 +2,10 @@
 
 ## Quickstart
 
+*NOTE* You should set `-cpu` to the maximum *PHYSICAL* cores on your computer. `go-miner` cannot use hyperthreading/hardware-threads, so setting `-cpu` higher than your *PHYSICAL* cores will likely reduce your overall hashrate.
+
 ```
 ./go-miner-macos \
-	-addr <pool ip address> \
-	-port <pool ip port> \
-	-password <pool password> \
 	-wallet <your wallet address> \
 	-cpu <number of CPU cores to use when mining>
 ```
@@ -14,9 +13,6 @@
 e.g.
 ```
 ./go-miner-macos \
-	-addr noso.dukedog.io \
-	-port 8082 \
-	-password duke \
 	-wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
 	-cpu 4
 ```
