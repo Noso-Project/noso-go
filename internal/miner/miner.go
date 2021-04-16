@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -74,26 +73,16 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 						hashStr = string(w) + string(x) + string(y) + string(z)
 
 						comms.Solutions <- Solution{
-							Seed:    job.SeedMiner,
-							HashStr: job.SeedPostfix + hashStr,
-							Block:   job.Block,
-							Chars:   target_len,
-							Step:    job.Step,
+							Seed:       job.SeedMiner,
+							HashStr:    job.SeedPostfix + hashStr,
+							Block:      job.Block,
+							Chars:      target_len,
+							Step:       job.Step,
+							SolvedHash: val[:1] + val[1:],
+							TargetLen:  target_len,
+							Target:     job.TargetString[:target_len],
+							FullTarget: job.TargetString[:job.TargetChars],
 						}
-
-						fmt.Printf(
-							found_one,
-							worker_num,
-							job.Block,
-							job.Step,
-							job.SeedMiner,
-							job.PoolAddr,
-							job.SeedPostfix+hashStr,
-							val,
-							target_len,
-							job.TargetString[:target_len],
-							job.TargetString[:job.TargetChars],
-						)
 					}
 				}
 			}
@@ -110,19 +99,3 @@ func BytesToString(bytes []byte) string {
 	stringHeader.Len = sliceHeader.Len
 	return s
 }
-
-const found_one = `
-************************************
-FOUND ONE
-Worker        : %s
-Block         : %d
-Step          : %d
-Seed          : %s
-Pool Addr     : %s
-Number        : %s
-Found         : %s
-Target Len    : %d
-Target        : %s
-Full Target   : %s
-************************************
-`
