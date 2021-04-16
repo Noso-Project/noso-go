@@ -62,11 +62,23 @@ jobs:
           binaries/go-miner-macos -h
           binaries/go-miner-macos -version
 
+  test-arm:
+    name: Test ARM binaries exist
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Run basic commands
+        run: |
+          sh -c 'if test -f "binaries/go-miner-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
+          sh -c 'if test -f "binaries/go-miner-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
+
   cut-release:
     if: contains(github.ref, '/tags/v')
     name: Package and Upload
     runs-on: ubuntu-latest
-    needs: [build, test-linux, test-windows, test-macos]
+    needs: [build, test-linux, test-windows, test-macos, test-arm]
     steps:
       - name: Checkout master
         uses: actions/checkout@master

@@ -14,7 +14,7 @@ endif
 LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'"
 
 .PHONY: all
-all: $(APP)-linux $(APP)-macos $(APP).exe
+all: $(APP)-linux $(APP)-macos $(APP).exe $(APP)-arm $(APP)-arm64
 
 $(APP)-linux:
 	GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
@@ -24,6 +24,12 @@ $(APP)-macos:
 
 $(APP).exe:
 	GOOS=windows GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
+
+$(APP)-arm:
+	GOOS=linux GOARCH=arm go build -o $@ $(LDFLAGS) cmd/miner/main.go
+
+$(APP)-arm64:
+	GOOS=linux GOARCH=arm64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
 $(APP)-$(TAG).zip:
 	(cd binaries && zip ../$@ ./*)
@@ -36,3 +42,5 @@ clean:
 	rm -f $(APP).exe
 	rm -f $(APP)-linux
 	rm -f $(APP)-macos
+	rm -f $(APP)-arm
+	rm -f $(APP)-arm64

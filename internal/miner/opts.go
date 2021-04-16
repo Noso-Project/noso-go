@@ -21,7 +21,7 @@ func GetOpts() *Opts {
 	ipPort := flag.Int("port", 8082, "IP port of the Noso Pool. Defaults to 8082")
 	poolPw := flag.String("password", "", "Password for the NosoPool")
 	wallet := flag.String("wallet", "", "Noso address from your wallet")
-	cpu := flag.Int("cpu", 0, "Number of CPUs to use when mining. Defaults to MAXCPU - 1")
+	cpu := flag.Int("cpu", 0, "Number of CPUs to use when mining. Defaults to MAXCPU / 2")
 
 	flag.Parse()
 
@@ -40,7 +40,7 @@ func GetOpts() *Opts {
 	}
 
 	if *cpu == 0 {
-		c := runtime.NumCPU() - 1
+		c := runtime.NumCPU() / 2
 		cpu = &c
 	}
 
