@@ -17,9 +17,9 @@ type Opts struct {
 
 func GetOpts() *Opts {
 	ver := flag.Bool("version", false, "Print version and exit")
-	ipAddr := flag.String("addr", "", "IP address of Noso Pool")
-	ipPort := flag.Int("port", 8082, "IP port of the Noso Pool. Defaults to 8082")
-	poolPw := flag.String("password", "", "Password for the NosoPool")
+	// ipAddr := flag.String("addr", "", "IP address of Noso Pool")
+	// ipPort := flag.Int("port", 8082, "IP port of the Noso Pool. Defaults to 8082")
+	// poolPw := flag.String("password", "", "Password for the NosoPool")
 	wallet := flag.String("wallet", "", "Noso address from your wallet")
 	cpu := flag.Int("cpu", 0, "Number of CPUs to use when mining. Defaults to MAXCPU / 2")
 
@@ -28,12 +28,12 @@ func GetOpts() *Opts {
 	if *ver {
 		fmt.Printf("Version: %s\n", Version)
 		os.Exit(0)
-	} else if *ipAddr == "" {
-		fmt.Println("-addr cannot be blank")
-		os.Exit(1)
-	} else if *poolPw == "" {
-		fmt.Println("-password cannot be blank")
-		os.Exit(1)
+		// } else if *ipAddr == "" {
+		// 	fmt.Println("-addr cannot be blank")
+		// 	os.Exit(1)
+		// } else if *poolPw == "" {
+		// 	fmt.Println("-password cannot be blank")
+		// 	os.Exit(1)
 	} else if *wallet == "" {
 		fmt.Println("-wallet cannot be blank")
 		os.Exit(1)
@@ -44,10 +44,14 @@ func GetOpts() *Opts {
 		cpu = &c
 	}
 
+	ipAddr := "noso.dukedog.io"
+	ipPort := 8082
+	poolPw := "duke"
+
 	return &Opts{
-		IpAddr: *ipAddr,
-		IpPort: *ipPort,
-		PoolPw: *poolPw,
+		IpAddr: ipAddr,
+		IpPort: ipPort,
+		PoolPw: poolPw,
 		Wallet: *wallet,
 		Cpu:    *cpu,
 	}
