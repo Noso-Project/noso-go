@@ -12,11 +12,13 @@ Download the latest release from the [Releases Page](https://github.com/leviable
 ### Quickstart - Windows
 
 1. Unzip the release
-2. Edit the `go-miner.bat` file
+2. Edit the `go-miner-64bit.bat` file
 3. Update the CPU line with the number of PHYSICAL cores you want to use
 4. Update the WALLET line with your wallet address
 5. Save and close
-6. Double click the go-miner.bat file 
+6. Double click the go-miner-64bit.bat file 
+
+NOTE: If you have an older 32 bit computer, you may need to use the go-miner-32bit.bat version
 
 ### Quickstart - Linux/Mac/ARM
 

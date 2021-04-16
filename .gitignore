@@ -18,3 +18,4 @@
 .DS_Store
 go-miner-*
 go-miner.exe
+!go-miner-*.bat

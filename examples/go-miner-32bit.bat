@@ -20,6 +20,6 @@ setlocal enableDelayedExpansion
 taskkill /F /im go-miner.exe
 timeout 3
 
-go-miner.exe -wallet !WALLET! -cpu !CPU!
+go-miner-32.exe -wallet !WALLET! -cpu !CPU!
 timeout 10
 goto loop
