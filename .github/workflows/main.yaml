@@ -21,8 +21,8 @@ jobs:
           name: binaries
           path: |
             go-miner*
-            payment-requestor*
             README.md
+            examples/*
 
   test-linux:
     name: Test Linux

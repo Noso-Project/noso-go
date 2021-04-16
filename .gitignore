@@ -16,4 +16,5 @@
 
 # noso-go additions
 .DS_Store
-go-miner*
+go-miner-*
+go-miner.exe
