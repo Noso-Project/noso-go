@@ -16,13 +16,17 @@ jobs:
       - name: Build binary
         run: make all
 
+      - name: Copy out example bat
+        run: cp examples/go-miner.bat .
+
       - uses: actions/upload-artifact@v2
         with:
           name: binaries
           path: |
-            go-miner*
+            go-miner-*
+            go-miner.exe
             README.md
-            examples/*
+            go-miner.bat
 
   test-linux:
     name: Test Linux
