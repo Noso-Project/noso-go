@@ -1,6 +1,6 @@
 WORKDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-APP := go-miner
+APP := noso
 
 REVISION := $(shell git rev-parse --short=8 HEAD)
 TAG := $(shell git describe --tags --exact-match $(REVISION) 2>/dev/null)
