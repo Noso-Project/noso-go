@@ -1,5 +1,7 @@
 package miner
 
+import "time"
+
 func NewComms() *Comms {
 	return &Comms{
 		PoolAddr:          make(chan string, 0),
@@ -41,4 +43,5 @@ type Comms struct {
 type Report struct {
 	WorkerNum string
 	Hashes    int
+	Duration  time.Duration
 }
