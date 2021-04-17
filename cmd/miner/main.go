@@ -16,7 +16,7 @@ func main() {
 		resp string
 
 		// state vars
-		start             time.Time
+		workerReports     map[string]miner.Report
 		poolAddr          string
 		minerSeed         string
 		targetBlock       int
@@ -33,6 +33,8 @@ func main() {
 		totalHashes int
 		hashRate    int
 	)
+
+	workerReports = make(map[string]miner.Report)
 
 	// Set a date in the past so we can request payment immediately if we
 	// have a vested balance
@@ -64,8 +66,6 @@ func main() {
 		}
 		close(ready)
 	}()
-
-	start = time.Now()
 
 	// TODO: Sending individual info (block, chars, string, etc
 	//       will probably lead to a race condition. Send a
@@ -105,10 +105,14 @@ func main() {
 			solComms.Solution <- sol
 		case report := <-comms.Reports:
 			// TODO: do rolling average instead of all time
+			workerReports[report.WorkerNum] = report
+
+			hashRate = 0
+			for _, rep := range workerReports {
+				dur := float64(rep.Duration) / float64(time.Second)
+				hashRate += int(float64(rep.Hashes) / dur)
+			}
 			totalHashes += report.Hashes
-			timeSince := time.Since(start)
-			dur := float64(timeSince) / float64(time.Second)
-			hashRate = int(float64(totalHashes) / dur)
 			comms.HashRate <- hashRate
 		case resp = <-client.RecvChan:
 			go miner.Parse(comms, resp)

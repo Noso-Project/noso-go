@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -15,6 +16,8 @@ const (
 
 func Miner(worker_num string, comms *Comms, ready chan bool) {
 	var (
+		jobStart     time.Time
+		jobDuration  time.Duration
 		buff         *bytes.Buffer
 		hashStr      string
 		target_len   int
@@ -41,6 +44,7 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 	// Report any TargetChars solutions immediately
 	// Store any TargetChars - 1 solutions until the steps drop
 	for job := range comms.Jobs {
+		jobStart = time.Now()
 		target_large = job.TargetString[:job.TargetChars]
 		target_small = job.TargetString[:job.TargetChars-1]
 		buff = bytes.NewBuffer(job.SeedFullBytes)
@@ -58,10 +62,15 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 						buff.WriteRune(y)
 						buff.WriteRune(z)
 
+						// This is the meat of the hashing
 						tmp = sha256.Sum256(buff.Bytes())
 						hex.Encode(encoded, tmp[:])
 						val = BytesToString(encoded)
 
+						// We could almost certainly increase hashrate if we
+						// could search the sha sum bytes rather than converting
+						// to a string first and then doing a string search
+						// Also, need to benchmark doing a small substring search
 						if !strings.Contains(val, target_small) {
 							continue
 						} else if strings.Contains(val, target_large) {
@@ -71,6 +80,8 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 						}
 
 						hashStr = string(w) + string(x) + string(y) + string(z)
+						solution := make([]byte, len(val))
+						copy(solution, val)
 
 						comms.Solutions <- Solution{
 							Seed:       job.SeedMiner,
@@ -78,7 +89,7 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 							Block:      job.Block,
 							Chars:      target_len,
 							Step:       job.Step,
-							SolvedHash: val[:1] + val[1:],
+							SolvedHash: *(*string)(unsafe.Pointer(&solution)),
 							TargetLen:  target_len,
 							Target:     job.TargetString[:target_len],
 							FullTarget: job.TargetString[:job.TargetChars],
@@ -87,7 +98,8 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 				}
 			}
 		}
-		comms.Reports <- Report{WorkerNum: worker_num, Hashes: hashCount}
+		jobDuration = time.Since(jobStart)
+		comms.Reports <- Report{WorkerNum: worker_num, Hashes: hashCount, Duration: jobDuration}
 	}
 }
 
