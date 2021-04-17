@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -34,17 +35,24 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "noso-go",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "noso",
+	Short: "CLI application for mining Noso coin",
+	Long: `A CLI application for mining Noso coin from a pool
+Example usage:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Mine Noso:
+noso mine \
+	--address noso.dukedog.io \
+	--port 8082 \
+	--password duke \
+	--wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
+	--cpu 4
+
+To benchmark your computer for the best --cpu setting
+noso benchmark
+
+Print version
+noso version`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -60,7 +68,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.noso-go.yaml)")
+	// TODO: allow use of config file
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.noso-go.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
