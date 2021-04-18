@@ -6,7 +6,26 @@ import (
 	"time"
 )
 
-func logPayment(paymentMsg []string) {
+const HEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id"
+
+func CreateLogPaymentsFile() {
+	write("")
+}
+
+func LogPaymentReq(poolIp string, wallet string, block int) {
+	var (
+		now      time.Time
+		writeStr string
+	)
+	now = time.Now()
+	now.Format(time.RFC3339)
+
+	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,,\n", now, poolIp, wallet, "Payment Request", block)
+
+	write(writeStr)
+}
+
+func LogPaymentResp(paymentMsg []string, poolIp, wallet string, block int) {
 	var (
 		now      time.Time
 		amount   string
@@ -16,6 +35,7 @@ func logPayment(paymentMsg []string) {
 		writeStr string
 	)
 	now = time.Now()
+	now.Format(time.RFC3339)
 	amount = paymentMsg[1]
 	if len(paymentMsg) > 2 {
 		orderId = paymentMsg[2]
@@ -33,8 +53,12 @@ func logPayment(paymentMsg []string) {
 		amount = fmt.Sprintf("%s.%s", whole, frac)
 	}
 
-	writeStr = fmt.Sprintf("%s,%s,%s\n", now, amount, orderId)
+	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,%s\n", now, poolIp, wallet, "Payment Response", block, amount, orderId)
 
+	write(writeStr)
+}
+
+func write(writeStr string) {
 	f, err := os.OpenFile("payments.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	if err != nil {
@@ -44,7 +68,27 @@ func logPayment(paymentMsg []string) {
 
 	defer f.Close()
 
-	if _, err2 := f.WriteString(writeStr); err2 != nil {
-		fmt.Printf("Trouble writing to payments.csv: %s\n", err2)
+	// Check to see if the file size is 0, indicating we just created it.
+	// If we did create it, add csv headers first
+	s, err := f.Stat()
+
+	if err != nil {
+		fmt.Printf("Trouble getting file stats for payments.csv: %s\n", err)
+	} else {
+		size := s.Size()
+		if size == 0 {
+			if _, err := f.WriteString(HEADER); err != nil {
+				fmt.Printf("Trouble header to payments.csv: %s\n", err)
+			}
+		}
+	}
+
+	// Special case: if writeString is empty it means we should only write the header
+	if writeStr == "" {
+		return
+	}
+
+	if _, err := f.WriteString(writeStr); err != nil {
+		fmt.Printf("Trouble writing to payments.csv: %s\n", err)
 	}
 }
