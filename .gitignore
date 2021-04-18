@@ -16,6 +16,7 @@
 
 # noso-go additions
 .DS_Store
-go-miner-*
-go-miner.exe
-!go-miner-*.bat
+bin/go-miner*
+packages/go-miner*
+*.tgz
+*.zip

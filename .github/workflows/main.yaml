@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: binaries
+          name: bin
           path: |
             go-miner-*
             README.md
@@ -35,9 +35,9 @@ jobs:
         name: Download Artifacts
       - name: Run basic commands
         run: |
-          chmod a+x binaries/go-miner-linux
-          binaries/go-miner-linux -h
-          binaries/go-miner-linux -version
+          chmod a+x bin/go-miner-linux
+          bin/go-miner-linux -h
+          bin/go-miner-linux -version
 
   test-windows:
     name: Test Windows
@@ -48,12 +48,12 @@ jobs:
         name: Download Artifacts
       - name: Run basic commands - 64 Bit
         run: |
-          binaries/go-miner-64.exe -h
-          binaries/go-miner-64.exe -version
+          bin/go-miner-64.exe -h
+          bin/go-miner-64.exe -version
       - name: Run basic commands - 32 Bit
         run: |
-          binaries/go-miner-32.exe -h
-          binaries/go-miner-32.exe -version
+          bin/go-miner-32.exe -h
+          bin/go-miner-32.exe -version
 
   test-macos:
     name: Test Mac OS
@@ -64,9 +64,9 @@ jobs:
         name: Download Artifacts
       - name: Run basic commands
         run: |
-          chmod a+x binaries/go-miner-macos
-          binaries/go-miner-macos -h
-          binaries/go-miner-macos -version
+          chmod a+x bin/go-miner-macos
+          bin/go-miner-macos -h
+          bin/go-miner-macos -version
 
   test-arm:
     name: Test ARM
@@ -77,12 +77,12 @@ jobs:
         name: Download Artifacts
       - name: Run basic commands
         run: |
-          sh -c 'if test -f "binaries/go-miner-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
-          sh -c 'if test -f "binaries/go-miner-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/go-miner-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/go-miner-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
 
-  cut-release:
+  package-linux-i386:
     if: contains(github.ref, '/tags/v')
-    name: Package and Upload
+    name: Package linux i386
     runs-on: ubuntu-latest
     needs: [build, test-linux, test-windows, test-macos, test-arm]
     steps:

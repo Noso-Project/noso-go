@@ -14,21 +14,21 @@ endif
 LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'"
 
 .PHONY: all
-all: $(APP)-linux $(APP)-linux-32 $(APP)-macos $(APP)-32.exe $(APP)-64.exe $(APP)-arm $(APP)-arm64
+all: $(APP)-linux-x86_64 $(APP)-linux-i386 $(APP)-darwin $(APP)-win32.exe $(APP)-win64.exe $(APP)-arm $(APP)-arm64
 
-$(APP)-linux:
+$(APP)-linux-x86_64:
 	GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-linux-32:
+$(APP)-linux-i386:
 	GOOS=linux GOARCH=386 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-macos:
+$(APP)-darwin:
 	GOOS=darwin GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-64.exe:
+$(APP)-win64.exe:
 	GOOS=windows GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-32.exe:
+$(APP)-win32.exe:
 	GOOS=windows GOARCH=386 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
 $(APP)-arm:
@@ -37,15 +37,34 @@ $(APP)-arm:
 $(APP)-arm64:
 	GOOS=linux GOARCH=arm64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-$(TAG).zip:
-	(cd binaries && zip ../$@ ./*)
-
-.PHONY: zip
-zip: $(APP)-$(TAG).zip
+.PHONY: package-%
+package-%: OS=$(word 2,$(subst -, ,$@))
+package-%: ARCH=$(word 3,$(subst -, ,$@))
+package-%:
+	mkdir -p packages;\
+	case $(OS) in \
+		linux) \
+			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
+			chmod +x bin/$(APP);\
+			(cd bin && tar -zcvf ../$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP)); \
+			;; \
+		darwin) \
+			cp bin/$(APP)-$(OS) bin/$(APP);\
+			chmod +x bin/$(APP);\
+			(cd bin && zip ../$(APP)-$(TAG)-$(OS).zip $(APP)); \
+			;; \
+		windows) \
+			cp bin/$(APP)-$(OS) bin/$(APP);\
+			chmod +x bin/$(APP);\
+			(cd bin && zip ../$(APP)-$(TAG)-$(OS).zip $(APP)); \
+			;; \
+	esac
 
 .PHONY: clean
 clean:
 	rm -f $(APP)-*.exe
 	rm -f $(APP)-linux*
-	rm -f $(APP)-macos
+	rm -f $(APP)-darwin*
 	rm -f $(APP)-arm*
+	rm -f packages/*.tgz
+	rm -f packages/*.zip
