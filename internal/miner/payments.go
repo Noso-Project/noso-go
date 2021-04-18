@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const HEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id"
+const HEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id\n"
 
 func CreateLogPaymentsFile() {
 	write("")
