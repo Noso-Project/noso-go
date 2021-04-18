@@ -15,7 +15,7 @@ const (
 	STEPOK     = "STEPOK"
 )
 
-func Parse(comms *Comms, resp string) {
+func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	if resp == "" {
 		fmt.Println("Got an empty response")
 		return
@@ -31,7 +31,7 @@ func Parse(comms *Comms, resp string) {
 	case PASSFAILED:
 		fmt.Println("Incorrect pool password")
 	case PAYMENTOK:
-		logPayment(r)
+		LogPaymentResp(r, poolIp, wallet, block)
 	case PONG:
 		// NoOp
 	case POOLSTEPS:
