@@ -18,9 +18,8 @@ func LogPaymentReq(poolIp string, wallet string, block int) {
 		writeStr string
 	)
 	now = time.Now()
-	now.Format(time.RFC3339)
 
-	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,,\n", now, poolIp, wallet, "Payment Request", block)
+	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,,\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Request", block)
 
 	write(writeStr)
 }
