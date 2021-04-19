@@ -34,7 +34,6 @@ func LogPaymentResp(paymentMsg []string, poolIp, wallet string, block int) {
 		writeStr string
 	)
 	now = time.Now()
-	now.Format(time.RFC3339)
 	amount = paymentMsg[1]
 	if len(paymentMsg) > 2 {
 		orderId = paymentMsg[2]
@@ -52,7 +51,7 @@ func LogPaymentResp(paymentMsg []string, poolIp, wallet string, block int) {
 		amount = fmt.Sprintf("%s.%s", whole, frac)
 	}
 
-	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,%s\n", now, poolIp, wallet, "Payment Response", block, amount, orderId)
+	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,%s\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Response", block, amount, orderId)
 
 	write(writeStr)
 }
