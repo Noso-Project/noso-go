@@ -16,8 +16,8 @@
 
 # noso-go additions
 .DS_Store
-bin/go-miner*
-packages/go-miner*
+bin/noso*
+packages/noso*
 *.tgz
 *.zip
 **/*.csv

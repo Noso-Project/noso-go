@@ -17,10 +17,15 @@ LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VE
 all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
 
 .PHONY: $(APP)-%
-$(APP)-%: OS=$(word 3,$(subst -, ,$@))
-$(APP)-%: ARCH=$(word 4,$(subst -, ,$@))
+$(APP)-%: OS=$(word 2,$(subst -, ,$@))
+$(APP)-%: ARCH=$(word 3,$(subst -, ,$@))
 $(APP)-%:
-	GOOS=$(OS) GOARCH=$(ARCH) go build -o bin/$@ $(LDFLAGS) cmd/miner/main.go
+	$(info # #########################################################)
+	$(info #)
+	$(info # Building $(APP) binary for OS $(OS) and Arch $(ARCH))
+	$(info #)
+	$(info # #########################################################)
+	GOOS=$(OS) GOARCH=$(ARCH) go build -o bin/$@ $(LDFLAGS) main.go
 
 .PHONY: packages
 packages: package-linux-386 package-linux-amd64 package-linux-arm package-linux-arm64 package-darwin-amd64 package-windows-386 package-windows-amd64
@@ -29,6 +34,11 @@ packages: package-linux-386 package-linux-amd64 package-linux-arm package-linux-
 package-%: OS=$(word 2,$(subst -, ,$@))
 package-%: ARCH=$(word 3,$(subst -, ,$@))
 package-%:
+	$(info # #########################################################)
+	$(info #)
+	$(info # Packaging $(APP) binary for OS $(OS) and Arch $(ARCH))
+	$(info #)
+	$(info # #########################################################)
 	@case $(OS) in \
 		linux) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
@@ -36,7 +46,7 @@ package-%:
 			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP)); \
 			;; \
 		darwin) \
-			cp bin/$(APP)-$(OS) bin/$(APP);\
+			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
 			chmod +x bin/$(APP);\
 			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP)); \
 			;; \
