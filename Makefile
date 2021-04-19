@@ -14,57 +14,45 @@ endif
 LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'"
 
 .PHONY: all
-all: $(APP)-linux-x86_64 $(APP)-linux-i386 $(APP)-darwin $(APP)-win32.exe $(APP)-win64.exe $(APP)-arm $(APP)-arm64
+all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
 
-$(APP)-linux-x86_64:
-	GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
+.PHONY: $(APP)-%
+$(APP)-%: OS=$(word 3,$(subst -, ,$@))
+$(APP)-%: ARCH=$(word 4,$(subst -, ,$@))
+$(APP)-%:
+	GOOS=$(OS) GOARCH=$(ARCH) go build -o bin/$@ $(LDFLAGS) cmd/miner/main.go
 
-$(APP)-linux-i386:
-	GOOS=linux GOARCH=386 go build -o $@ $(LDFLAGS) cmd/miner/main.go
-
-$(APP)-darwin:
-	GOOS=darwin GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
-
-$(APP)-win64.exe:
-	GOOS=windows GOARCH=amd64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
-
-$(APP)-win32.exe:
-	GOOS=windows GOARCH=386 go build -o $@ $(LDFLAGS) cmd/miner/main.go
-
-$(APP)-arm:
-	GOOS=linux GOARCH=arm go build -o $@ $(LDFLAGS) cmd/miner/main.go
-
-$(APP)-arm64:
-	GOOS=linux GOARCH=arm64 go build -o $@ $(LDFLAGS) cmd/miner/main.go
+.PHONY: packages
+packages: package-linux-386 package-linux-amd64 package-linux-arm package-linux-arm64 package-darwin-amd64 package-windows-386 package-windows-amd64
 
 .PHONY: package-%
 package-%: OS=$(word 2,$(subst -, ,$@))
 package-%: ARCH=$(word 3,$(subst -, ,$@))
 package-%:
-	mkdir -p packages;\
-	case $(OS) in \
+	@case $(OS) in \
 		linux) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
 			chmod +x bin/$(APP);\
-			(cd bin && tar -zcvf ../$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP)); \
+			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP)); \
 			;; \
 		darwin) \
 			cp bin/$(APP)-$(OS) bin/$(APP);\
 			chmod +x bin/$(APP);\
-			(cd bin && zip ../$(APP)-$(TAG)-$(OS).zip $(APP)); \
+			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP)); \
 			;; \
 		windows) \
-			cp bin/$(APP)-$(OS) bin/$(APP);\
-			chmod +x bin/$(APP);\
-			(cd bin && zip ../$(APP)-$(TAG)-$(OS).zip $(APP)); \
+			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP).exe;\
+			chmod +x bin/$(APP).exe;\
+			if [ "$(ARCH)" = "386" ]; then \
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe); \
+			else \
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe); \
+			fi \
 			;; \
 	esac
 
 .PHONY: clean
 clean:
-	rm -f $(APP)-*.exe
-	rm -f $(APP)-linux*
-	rm -f $(APP)-darwin*
-	rm -f $(APP)-arm*
+	rm -f bin/$(APP)*
 	rm -f packages/*.tgz
 	rm -f packages/*.zip
