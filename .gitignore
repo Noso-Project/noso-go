@@ -13,3 +13,11 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# noso-go additions
+.DS_Store
+bin/noso*
+packages/noso*
+*.tgz
+*.zip
+**/*.csv

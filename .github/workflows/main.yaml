@@ -1,0 +1,132 @@
+on:
+  push:
+    branches:
+      - "*"
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@master
+
+      - name: Build binary
+        run: make all
+
+      - name: Copy out example bat
+        run: cp examples/noso-*.bat .
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: |
+            bin/noso-*
+            README.md
+
+  test-linux:
+    name: Test Linux
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Move artifacts
+        run: |
+          mv artifact/bin .
+      - name: Run basic commands - i386
+        run: |
+          chmod a+x bin/noso-linux-386
+          bin/noso-linux-386 -h
+          bin/noso-linux-386 version
+          bin/noso-linux-386 benchmark
+          bin/noso-linux-386 mine -h
+      - name: Run basic commands - x86_64
+        run: |
+          chmod a+x bin/noso-linux-amd64
+          bin/noso-linux-amd64 -h
+          bin/noso-linux-amd64 version
+          bin/noso-linux-amd64 benchmark
+          bin/noso-linux-amd64 mine -h
+
+  test-windows:
+    name: Test Windows
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
+      - name: Run basic commands - 64 Bit
+        run: |
+          bin/noso-windows-amd64 -h
+          bin/noso-windows-amd64 version
+          bin/noso-windows-amd64 bencmark
+          bin/noso-windows-amd64 mine -h
+      - name: Run basic commands - 32 Bit
+        run: |
+          bin/noso-windows-386 -h
+          bin/noso-windows-386 version
+          bin/noso-windows-386 benchmark
+          bin/noso-windows-386 mine -h
+
+  test-macos:
+    name: Test Mac OS
+    runs-on: macos-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
+      - name: Run basic commands
+        run: |
+          chmod a+x bin/noso-darwin-amd64
+          bin/noso-darwin-amd64 -h
+          bin/noso-darwin-amd64 version
+          bin/noso-darwin-amd64 benchmark
+          bin/noso-darwin-amd64 mine -h
+
+  # TODO: See if we can use qemu to actually test these binaries
+  test-arm:
+    name: Test ARM
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
+      - name: Run basic commands
+        run: |
+          sh -c 'if test -f "bin/noso-linux-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/noso-linux-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
+
+  package-release:
+    if: contains(github.ref, '/tags/v')
+    name: Package and Upload
+    runs-on: ubuntu-latest
+    needs: [build, test-linux, test-windows, test-macos, test-arm]
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@master
+      - uses: actions/download-artifact@v2
+        name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin/* bin/
+      - name: Package
+        run: make packages
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            packages/noso*.zip
+            packages/noso*.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

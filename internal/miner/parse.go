@@ -15,7 +15,7 @@ const (
 	STEPOK     = "STEPOK"
 )
 
-func Parse(comms *Comms, resp string) {
+func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	if resp == "" {
 		fmt.Println("Got an empty response")
 		return
@@ -29,8 +29,9 @@ func Parse(comms *Comms, resp string) {
 		poolData(comms, r, 2)
 		comms.Joined <- struct{}{}
 	case PASSFAILED:
-		fmt.Println("Incorrect password")
+		fmt.Println("Incorrect pool password")
 	case PAYMENTOK:
+		LogPaymentResp(r, poolIp, wallet, block)
 	case PONG:
 		// NoOp
 	case POOLSTEPS:
@@ -44,11 +45,11 @@ func Parse(comms *Comms, resp string) {
 }
 
 func poolData(comms *Comms, resp []string, offset int) {
-	targetBlock, err := strconv.Atoi(resp[2+offset])
+	block, err := strconv.Atoi(resp[2+offset])
 	if err != nil {
 		fmt.Printf("Error converting target block: %s\n", resp[2+offset])
 	} else {
-		comms.TargetBlock <- targetBlock
+		comms.Block <- block
 	}
 
 	comms.TargetString <- resp[3+offset]
@@ -60,10 +61,26 @@ func poolData(comms *Comms, resp []string, offset int) {
 		comms.TargetChars <- targetChars
 	}
 
-	currentStep, err := strconv.Atoi(resp[5+offset])
+	step, err := strconv.Atoi(resp[5+offset])
 	if err != nil {
 		fmt.Printf("Error converting target chars: %s\n", resp[5+offset])
 	} else {
-		comms.CurrentStep <- currentStep
+		comms.Step <- step
+	}
+
+	diff, err := strconv.Atoi(resp[6+offset])
+	if err != nil {
+		fmt.Printf("Error converting target chars: %s\n", resp[6+offset])
+	} else {
+		comms.Diff <- diff
+	}
+
+	comms.Balance <- resp[7+offset]
+
+	blocksTillPayment, err := strconv.Atoi(resp[8+offset])
+	if err != nil {
+		fmt.Printf("Error converting target chars: %s\n", resp[8+offset])
+	} else {
+		comms.BlocksTillPayment <- blocksTillPayment
 	}
 }
