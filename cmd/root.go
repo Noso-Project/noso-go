@@ -35,13 +35,13 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "noso",
+	Use:   "noso-go",
 	Short: "CLI application for mining Noso coin",
 	Long: `A CLI application for mining Noso coin from a pool
 Example usage:
 
 Mine Noso:
-noso mine \
+./noso-go mine \
 	--address noso.dukedog.io \
 	--port 8082 \
 	--password duke \
@@ -49,10 +49,10 @@ noso mine \
 	--cpu 4
 
 To benchmark your computer for the best --cpu setting
-noso benchmark
+./noso-go benchmark
 
 Print version
-noso version`,
+./noso-go version`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

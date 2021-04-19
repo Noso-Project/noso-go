@@ -21,3 +21,4 @@ packages/noso*
 *.tgz
 *.zip
 **/*.csv
+bin/README.md

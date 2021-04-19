@@ -9,26 +9,24 @@ In most instances you will want the `64` version unless you have a fairly old co
 ### Quickstart - Windows
 
 1. Unzip the release
-2. Edit the `noso-win64.bat` file
+2. Edit the `noso-go.bat` file
 3. Update the CPU line with the number of PHYSICAL cores you want to use
 4. Update the WALLET line with your wallet address
 5. Save and close
-6. Double click the noso-win64.bat file 
-
-NOTE: If you have an older 32 bit computer, you will need to use the `noso-win32.bat` version
+6. Double click the noso-go.bat file 
 
 ### Quickstart - Linux/Mac/ARM
 Untar the archive:
 
 ```
-$ tar -zxvf noso-v0.8.0-linux-amd64.tgz
-x noso
+$ tar -zxvf noso-go-v0.8.0-linux-amd64.tgz
+x noso-go
 ```
 
 *NOTE* You should set `--cpu` to the maximum *PHYSICAL* cores on your computer. `go-miner` cannot use hyperthreading/hardware-threads, so setting `--cpu` higher than your *PHYSICAL* cores will likely reduce your overall hashrate.
 
 ```
-./noso mine \
+./noso-go mine \
     --address <IP Address or URL of the Noso pool> \
     --password <Password for the Noso pool> \
     --wallet <Your wallet address> \
@@ -38,7 +36,7 @@ x noso
 e.g.
 
 ```
-./noso mine \
+./noso-go mine \
     --address noso.dukedog.io \
     --password duke \
     --wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
@@ -105,7 +103,7 @@ When downloading the release, you will probably get a warning from your browser,
 	2. MacOS
 		3. The first time your run the binary you will get a popup like so. Click `Cancel`: ![](images/mac-1-popup.png)
 		3. Open your `System Preferences` app and click on the `Security & Privacy` icon
-		3. There should be a warning on the bottom about the `noso` application being blocked. Click the `Allow Anyway` button: ![](images/mac-2-allow-anyways.png)
+		3. There should be a warning on the bottom about the `noso-go` application being blocked. Click the `Allow Anyway` button: ![](images/mac-2-allow-anyways.png)
 	2. Linux
 		3. So far I have seen no reports of any flavor of Linux complaining about the binaries. If you come across a problem, please open an [Issue](https://github.com/leviable/noso-go/issues) in this repo and I will add it to the README
 
@@ -122,7 +120,7 @@ When downloading the release, you will probably get a warning from your browser,
 	2. OS options are: `windows`, `linux` or `darwin`
 	2. Architecture options are: `386`, `amd64`, `arm`, or `arm64`
 1. Compile (various examples below):
-	2. ```$ GOOS=windows GOARCH=amd64 go build -o noso main.go```
-	3. ```$ GOOS=darwin GOARCH=amd64 go build -o noso main.go```
-	4. ```$ GOOS=linux GOARCH=amd64 go build -o noso main.go```
-	5. ```$ GOOS=linux GOARCH=arm64 go build -o noso main.go```
+	2. ```$ GOOS=windows GOARCH=amd64 go build -o noso-go main.go```
+	3. ```$ GOOS=darwin GOARCH=amd64 go build -o noso-go main.go```
+	4. ```$ GOOS=linux GOARCH=amd64 go build -o noso-go main.go```
+	5. ```$ GOOS=linux GOARCH=arm64 go build -o noso-go main.go```
