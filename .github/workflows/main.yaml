@@ -21,9 +21,8 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: binaries
           path: |
-            go-miner-*
+            bin/go-miner-*
             README.md
 
   test-linux:
@@ -35,9 +34,13 @@ jobs:
         name: Download Artifacts
       - name: Run basic commands
         run: |
-          chmod a+x binaries/go-miner-linux
-          binaries/go-miner-linux -h
-          binaries/go-miner-linux -version
+          mv artifact/bin .
+          chmod a+x bin/go-miner-linux-386
+          bin/go-miner-linux-386 -h
+          bin/go-miner-linux-386 -version
+          chmod a+x bin/go-miner-linux-amd64
+          bin/go-miner-linux-amd64 -h
+          bin/go-miner-linux-amd64 -version
 
   test-windows:
     name: Test Windows
@@ -46,14 +49,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
       - name: Run basic commands - 64 Bit
         run: |
-          binaries/go-miner-64.exe -h
-          binaries/go-miner-64.exe -version
+          bin/go-miner-windows-amd64 -h
+          bin/go-miner-windows-amd64 -version
       - name: Run basic commands - 32 Bit
         run: |
-          binaries/go-miner-32.exe -h
-          binaries/go-miner-32.exe -version
+          bin/go-miner-windows-386 -h
+          bin/go-miner-windows-386 -version
 
   test-macos:
     name: Test Mac OS
@@ -62,11 +68,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
       - name: Run basic commands
         run: |
-          chmod a+x binaries/go-miner-macos
-          binaries/go-miner-macos -h
-          binaries/go-miner-macos -version
+          chmod a+x bin/go-miner-darwin-amd64
+          bin/go-miner-darwin-amd64 -h
+          bin/go-miner-darwin-amd64 -version
 
   test-arm:
     name: Test ARM
@@ -75,12 +84,15 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
       - name: Run basic commands
         run: |
-          sh -c 'if test -f "binaries/go-miner-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
-          sh -c 'if test -f "binaries/go-miner-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/go-miner-linux-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/go-miner-linux-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
 
-  cut-release:
+  package-release:
     if: contains(github.ref, '/tags/v')
     name: Package and Upload
     runs-on: ubuntu-latest
@@ -90,12 +102,16 @@ jobs:
         uses: actions/checkout@master
       - uses: actions/download-artifact@v2
         name: Download Artifacts
+      - name: Move bins
+        run: |
+          mv artifact/bin .
       - name: Package
-        run: make zip
+        run: make packages
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            go-miner*.zip
+            packages/go-miner*.zip
+            packages/go-miner*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
