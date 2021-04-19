@@ -17,6 +17,11 @@ In most instances you will want the `64` version unless you have a fairly old co
 
 NOTE: If you have an older 32 bit computer, you will need to use the `noso-win32.bat` version
 
+NOTE: To find out how many physical cores you have, you can run the following command in the command prompt (works on Windows 2000/NT or later):
+```
+wmic computersystem get numberoflogicalprocessors 
+```
+
 ### Quickstart - Linux/Mac/ARM
 Untar the archive:
 
@@ -30,7 +35,8 @@ x noso
 ```
 ./noso mine \
     --address <IP Address or URL of the Noso pool> \
-    --password <Password for the Noso pool> \
+    --port <Port of the Noso pool>
+	--password <Password for the Noso pool> \
     --wallet <Your wallet address> \
     --cpu <Number of CPU cores to use when mining>
 ```
@@ -40,13 +46,30 @@ e.g.
 ```
 ./noso mine \
     --address noso.dukedog.io \
-    --password duke \
+    --port 8082 \
+	--password duke \
     --wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
     --cpu 4          
 ```
 
+NOTE: If you get a permissions error, run this command in your terminal window, then try again:
+```
+chmod a+x noso-go
+```
+
 ### Quickstart - Android
-TODO: update this
+
+1. Download the latest 'linux-arm64' (or 'linux-arm') tar archive, and extract its contents to a local folder on your Android device.
+2. From the Google Play Store, Install [RS File Manager](https://play.google.com/store/apps/details?id=com.rs.explorer.filemanager)
+3. From the Google Play Store, Install [Termux](https://play.google.com/store/apps/details?id=com.termux)
+4. Open RS File Manager and browse to the location where you placed your noso-go arm file(s)
+5. Press and hold on the noso-go file, select the menu and choose "Open As", then select "Termux" (Optional: In Termux, you can type ```ls``` to list your arm file(s). This verifies that Termux started in the right folder.
+6. To start the noso-go miner, use the following command:
+```
+./noso-go mine --address <pool IP or URL> --port <Pool's Port Number> --password <Pool's Password> --wallet <Your Noso Wallet Address> --cpu <Number of physical cores on your CPU>
+```
+
+Note: When using all physical cores on your Android device, you may want to make sure it is in a well-cooled area so that heat does not become a problem.
 
 ## Introduction
 `noso-go` is a command line tool for mining the crypto currency [Noso Coin](https://nosocoin.com/). Written using Google's Go language, `noso-go`'s goals are as follows:
@@ -61,7 +84,7 @@ TODO: update this
 
 * Windows (32 and 64 bit)
 * Linux (32 and 64 bit)
-* MacOs (64 bit)
+* MacOS (64 bit)
 * Raspberry Pi (arm64)
 * Google Pixel 5 (arm64)
 
