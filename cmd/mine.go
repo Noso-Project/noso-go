@@ -37,7 +37,7 @@ var mineCmd = &cobra.Command{
 	Short: "CPU mine for Noso coin",
 	Long: `Connect to a Noso pool and CPU mine for Noso coin
 Example usage:
-noso mine \
+./noso-go mine \
 	--address noso.dukedog.io \
 	--port 8082 \
 	--password duke \

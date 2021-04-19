@@ -17,9 +17,9 @@ Rem #################################
 @echo off
 setlocal enableDelayedExpansion
 
-taskkill /F /im go-miner.exe
+taskkill /F /im noso-go.exe
 timeout 3
 
-go-miner-32.exe -wallet !WALLET! -cpu !CPU!
+noso-go.exe -wallet !WALLET! -cpu !CPU!
 timeout 10
 goto loop
