@@ -104,7 +104,7 @@ jobs:
         name: Download Artifacts
       - name: Move bins
         run: |
-          mv artifact/bin .
+          mv artifact/bin/* bin/
       - name: Package
         run: make packages
       - name: Upload Release
