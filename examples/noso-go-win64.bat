@@ -23,6 +23,6 @@ setlocal enableDelayedExpansion
 taskkill /F /im noso-go.exe
 timeout 3
 
-noso-go.exe mine --address !ADDRESS! --port !PORT! --password !PASSWORD! -wallet !WALLET! -cpu !CPU!
+noso-go.exe mine --address !ADDRESS! --port !PORT! --password !PASSWORD! --wallet !WALLET! --cpu !CPU!
 timeout 10
 goto loop
