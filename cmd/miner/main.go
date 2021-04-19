@@ -67,6 +67,9 @@ func main() {
 		close(ready)
 	}()
 
+	// Create the payments.csv file if it doesn't already exist
+	miner.CreateLogPaymentsFile()
+
 	// TODO: Sending individual info (block, chars, string, etc
 	//       will probably lead to a race condition. Send a
 	//       BlockUpdate struct instead with all info?
@@ -96,6 +99,7 @@ func main() {
 			// And we haven't requested payment in at least 10 minutes
 			if balance != "0" && blocksTillPayment > 0 && time.Since(paymentRequested) > 10*time.Minute {
 				client.SendChan <- "PAYMENT"
+				miner.LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock)
 				paymentRequested = time.Now()
 			}
 		case <-comms.StepSolved:
@@ -115,7 +119,7 @@ func main() {
 			totalHashes += report.Hashes
 			comms.HashRate <- hashRate
 		case resp = <-client.RecvChan:
-			go miner.Parse(comms, resp)
+			go miner.Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
 		}
 	}
 }

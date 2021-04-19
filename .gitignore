@@ -20,3 +20,4 @@ bin/go-miner*
 packages/go-miner*
 *.tgz
 *.zip
+**/*.csv
