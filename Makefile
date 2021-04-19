@@ -1,6 +1,6 @@
 WORKDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-APP := noso
+APP := noso-go
 
 REVISION := $(shell git rev-parse --short=8 HEAD)
 TAG := $(shell git describe --tags --exact-match $(REVISION) 2>/dev/null)
@@ -17,8 +17,8 @@ LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VE
 all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
 
 .PHONY: $(APP)-%
-$(APP)-%: OS=$(word 2,$(subst -, ,$@))
-$(APP)-%: ARCH=$(word 3,$(subst -, ,$@))
+$(APP)-%: OS=$(word 3,$(subst -, ,$@))
+$(APP)-%: ARCH=$(word 4,$(subst -, ,$@))
 $(APP)-%:
 	$(info # #########################################################)
 	$(info #)
@@ -39,30 +39,33 @@ package-%:
 	$(info # Packaging $(APP) binary for OS $(OS) and Arch $(ARCH))
 	$(info #)
 	$(info # #########################################################)
+	@cp README.md bin/
 	@case $(OS) in \
 		linux) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
 			chmod +x bin/$(APP);\
-			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP)); \
+			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md); \
 			;; \
 		darwin) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
 			chmod +x bin/$(APP);\
-			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP)); \
+			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP) README.md); \
 			;; \
 		windows) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP).exe;\
 			chmod +x bin/$(APP).exe;\
 			if [ "$(ARCH)" = "386" ]; then \
-				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe); \
+				cp examples/$(APP)-win32.bat bin/$(APP).bat;\
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe $(APP).bat README.md); \
 			else \
-				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe); \
+				cp examples/$(APP)-win64.bat bin/$(APP).bat;\
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe $(APP).bat README.md); \
 			fi \
 			;; \
 	esac
 
 .PHONY: clean
 clean:
-	rm -f bin/$(APP)*
-	rm -f packages/*.tgz
-	rm -f packages/*.zip
+	rm -f bin/*
+	rm -f packages/*
+	rm -f packages/*

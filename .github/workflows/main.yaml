@@ -16,13 +16,10 @@ jobs:
       - name: Build binary
         run: make all
 
-      - name: Copy out example bat
-        run: cp examples/noso-*.bat .
-
       - uses: actions/upload-artifact@v2
         with:
           path: |
-            bin/noso-*
+            bin/noso-go*
             README.md
 
   test-linux:
@@ -37,18 +34,18 @@ jobs:
           mv artifact/bin .
       - name: Run basic commands - i386
         run: |
-          chmod a+x bin/noso-linux-386
-          bin/noso-linux-386 -h
-          bin/noso-linux-386 version
-          bin/noso-linux-386 benchmark
-          bin/noso-linux-386 mine -h
+          chmod a+x bin/noso-go-linux-386
+          bin/noso-go-linux-386 -h
+          bin/noso-go-linux-386 version
+          bin/noso-go-linux-386 benchmark
+          bin/noso-go-linux-386 mine -h
       - name: Run basic commands - x86_64
         run: |
-          chmod a+x bin/noso-linux-amd64
-          bin/noso-linux-amd64 -h
-          bin/noso-linux-amd64 version
-          bin/noso-linux-amd64 benchmark
-          bin/noso-linux-amd64 mine -h
+          chmod a+x bin/noso-go-linux-amd64
+          bin/noso-go-linux-amd64 -h
+          bin/noso-go-linux-amd64 version
+          bin/noso-go-linux-amd64 benchmark
+          bin/noso-go-linux-amd64 mine -h
 
   test-windows:
     name: Test Windows
@@ -62,16 +59,16 @@ jobs:
           mv artifact/bin .
       - name: Run basic commands - 64 Bit
         run: |
-          bin/noso-windows-amd64 -h
-          bin/noso-windows-amd64 version
-          bin/noso-windows-amd64 bencmark
-          bin/noso-windows-amd64 mine -h
+          bin/noso-go-windows-amd64 -h
+          bin/noso-go-windows-amd64 version
+          bin/noso-go-windows-amd64 bencmark
+          bin/noso-go-windows-amd64 mine -h
       - name: Run basic commands - 32 Bit
         run: |
-          bin/noso-windows-386 -h
-          bin/noso-windows-386 version
-          bin/noso-windows-386 benchmark
-          bin/noso-windows-386 mine -h
+          bin/noso-go-windows-386 -h
+          bin/noso-go-windows-386 version
+          bin/noso-go-windows-386 benchmark
+          bin/noso-go-windows-386 mine -h
 
   test-macos:
     name: Test Mac OS
@@ -85,11 +82,11 @@ jobs:
           mv artifact/bin .
       - name: Run basic commands
         run: |
-          chmod a+x bin/noso-darwin-amd64
-          bin/noso-darwin-amd64 -h
-          bin/noso-darwin-amd64 version
-          bin/noso-darwin-amd64 benchmark
-          bin/noso-darwin-amd64 mine -h
+          chmod a+x bin/noso-go-darwin-amd64
+          bin/noso-go-darwin-amd64 -h
+          bin/noso-go-darwin-amd64 version
+          bin/noso-go-darwin-amd64 benchmark
+          bin/noso-go-darwin-amd64 mine -h
 
   # TODO: See if we can use qemu to actually test these binaries
   test-arm:
@@ -104,8 +101,8 @@ jobs:
           mv artifact/bin .
       - name: Run basic commands
         run: |
-          sh -c 'if test -f "bin/noso-linux-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
-          sh -c 'if test -f "bin/noso-linux-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/noso-go-linux-arm"; then echo "ARM binary found"; else echo "ARM binary not found" && exit 1; fi'
+          sh -c 'if test -f "bin/noso-go-linux-arm64"; then echo "ARM64 binary found"; else echo "ARM64 binary not found" && exit 1; fi'
 
   package-release:
     if: contains(github.ref, '/tags/v')
