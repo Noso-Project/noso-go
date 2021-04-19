@@ -43,13 +43,17 @@ package-%:
 	@case $(OS) in \
 		linux) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
+			cp examples/noso-go-run.sh bin/noso-go-run.sh;\
 			chmod +x bin/$(APP);\
-			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md); \
+			chmod +x examples/noso-go-run.sh;\
+			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md noso-go-run.sh); \
 			;; \
 		darwin) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
+			cp examples/noso-go-run.sh bin/noso-go-run.sh;\
 			chmod +x bin/$(APP);\
-			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP) README.md); \
+			chmod +x examples/noso-go-run.sh;\
+			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP) README.md noso-go-run.sh); \
 			;; \
 		windows) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP).exe;\
