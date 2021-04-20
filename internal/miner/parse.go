@@ -31,7 +31,7 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	case PASSFAILED:
 		fmt.Println("Incorrect pool password")
 	case PAYMENTOK:
-		LogPaymentResp(r, poolIp, wallet, block)
+		LogPaymentResp(r, poolIp)
 	case PONG:
 		// NoOp
 	case POOLSTEPS:

@@ -152,7 +152,7 @@ func mine(opts *miner.Opts) {
 			// And we haven't requested payment in at least 10 minutes
 			if balance != "0" && blocksTillPayment > 0 && time.Since(paymentRequested) > 10*time.Minute {
 				client.SendChan <- "PAYMENT"
-				miner.LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock)
+				miner.LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
 				paymentRequested = time.Now()
 			}
 		case <-comms.StepSolved:
