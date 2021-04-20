@@ -25,6 +25,11 @@ ADDRESS=noso.dukedog.io
 PORT=8082
 PASSWORD=duke
 
+# Pool: RussiaPool
+#ADDRESS=95.54.44.147
+#PORT=8080
+#PASSWORD=RussiaPool
+
 WALLET=[Your Wallet Address]
 CPU=[Number of CPUs]
 
