@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,12 +37,17 @@ func LogPaymentResp(paymentMsg []string, poolIp string) {
 		wallet   string
 	)
 
+	if len(paymentMsg) < 3 {
+		fmt.Println("Error: noso-go requires that the pool use Noso Wallet 0.2.0 N or greater")
+		return
+	}
+
 	// Example PAYMENTOK response
 	// <- PAYMENTOK 1618891646 POOLIP Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF 2 5833 1.48153045 OR60v3w4j25pkl7mp2aaxa6l7g7hxqsdlfu86fkueh11tfyqg03z
 	// <- PAYMENTOK [TIMESTAMP] POOLIP [MINERADDRESS] 2 [BLOCK] [AMOUNT] [ORDERID]
 	// Format payment into X.YYY format
 
-	wallet = paymentMsg[4]
+	wallet = paymentMsg[3]
 	block, err := strconv.Atoi(paymentMsg[5])
 	if err != nil {
 		fmt.Println("Error converting block string in PAYMENTOK response: ", err)
@@ -101,6 +107,8 @@ func parseAmount(amount string) string {
 	l := len(amount)
 	if amount == "0" {
 		amount = "0.00000000"
+	} else if strings.Contains(amount, ".") {
+		// Already formatted to X.YYY, do nothing
 	} else if l == 8 {
 		amount = "0." + amount
 	} else {
