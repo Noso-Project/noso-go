@@ -3,6 +3,7 @@ package miner
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -12,44 +13,45 @@ func CreateLogPaymentsFile() {
 	write("")
 }
 
-func LogPaymentReq(poolIp string, wallet string, block int) {
+func LogPaymentReq(poolIp string, wallet string, block int, amount string) {
 	var (
 		now      time.Time
 		writeStr string
 	)
 	now = time.Now()
 
-	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,,\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Request", block)
+	amount = parseAmount(amount)
+
+	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Request", block, amount)
 
 	write(writeStr)
 }
 
-func LogPaymentResp(paymentMsg []string, poolIp, wallet string, block int) {
+func LogPaymentResp(paymentMsg []string, poolIp string) {
 	var (
 		now      time.Time
 		amount   string
 		orderId  string
-		whole    string
-		frac     string
 		writeStr string
+		wallet   string
 	)
-	now = time.Now()
-	amount = paymentMsg[1]
-	if len(paymentMsg) > 2 {
-		orderId = paymentMsg[2]
-	}
 
+	// Example PAYMENTOK response
+	// <- PAYMENTOK 1618891646 POOLIP Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF 2 5833 1.48153045 OR60v3w4j25pkl7mp2aaxa6l7g7hxqsdlfu86fkueh11tfyqg03z
+	// <- PAYMENTOK [TIMESTAMP] POOLIP [MINERADDRESS] 2 [BLOCK] [AMOUNT] [ORDERID]
 	// Format payment into X.YYY format
-	l := len(amount)
-	if amount == "0" {
-		amount = "0.00000000"
-	} else if l == 8 {
-		amount = "0." + amount
-	} else {
-		whole = amount[:l-8]
-		frac = amount[l-8:]
-		amount = fmt.Sprintf("%s.%s", whole, frac)
+
+	wallet = paymentMsg[4]
+	block, err := strconv.Atoi(paymentMsg[5])
+	if err != nil {
+		fmt.Println("Error converting block string in PAYMENTOK response: ", err)
 	}
+	amount = paymentMsg[6]
+	orderId = paymentMsg[7]
+
+	now = time.Now()
+
+	amount = parseAmount(amount)
 
 	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,%s\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Response", block, amount, orderId)
 
@@ -89,4 +91,22 @@ func write(writeStr string) {
 	if _, err := f.WriteString(writeStr); err != nil {
 		fmt.Printf("Trouble writing to payments.csv: %s\n", err)
 	}
+}
+
+func parseAmount(amount string) string {
+	var (
+		whole string
+		frac  string
+	)
+	l := len(amount)
+	if amount == "0" {
+		amount = "0.00000000"
+	} else if l == 8 {
+		amount = "0." + amount
+	} else {
+		whole = amount[:l-8]
+		frac = amount[l-8:]
+		amount = fmt.Sprintf("%s.%s", whole, frac)
+	}
+	return amount
 }
