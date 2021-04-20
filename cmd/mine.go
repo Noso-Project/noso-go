@@ -30,6 +30,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	HEADER = `# ##########################################################
+#
+# noso-go %s by levi.noecker@gmail.com (c)2021
+# https://github.com/leviable/noso-go
+#
+# ##########################################################
+`
+)
+
 var mineOpts = &miner.Opts{}
 
 var mineCmd = &cobra.Command{
@@ -87,6 +97,7 @@ func mine(opts *miner.Opts) {
 		totalHashes int
 		hashRate    int
 	)
+	fmt.Printf(HEADER, miner.Version)
 
 	workerReports = make(map[string]miner.Report)
 
@@ -95,6 +106,8 @@ func mine(opts *miner.Opts) {
 	balance = "0"
 	paymentRequested = time.Now().Add(-3 * time.Hour)
 
+	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
+	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
 	comms := miner.NewComms()
 	client := miner.NewTcpClient(opts, comms)
 
