@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const HEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id\n"
+const CSVHEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id\n"
 
 func CreateLogPaymentsFile() {
 	write("")
@@ -83,7 +83,7 @@ func write(writeStr string) {
 	} else {
 		size := s.Size()
 		if size == 0 {
-			if _, err := f.WriteString(HEADER); err != nil {
+			if _, err := f.WriteString(CSVHEADER); err != nil {
 				fmt.Printf("Trouble header to payments.csv: %s\n", err)
 			}
 		}
