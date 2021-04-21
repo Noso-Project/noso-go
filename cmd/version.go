@@ -22,9 +22,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/leviable/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
 
@@ -32,9 +29,10 @@ import (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version",
-	Long:  `Print version`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Version: %s\n", miner.Version)
+		root := cmd.Root()
+		root.SetArgs([]string{"--version"})
+		root.Execute()
 	},
 }
 
