@@ -24,6 +24,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -32,9 +33,10 @@ import (
 )
 
 var (
-	list  bool
-	info  bool
-	pools map[string]*miner.Opts
+	list     bool
+	info     bool
+	pools    map[string]*miner.Opts
+	poolOpts = &miner.Opts{}
 )
 
 // poolCmd represents the pool command
@@ -74,19 +76,26 @@ Start mining with a pool
 			listPools()
 			return
 		}
+
 		poolName := args[0]
-		poolOpts := pools[poolName]
+		pool := pools[poolName]
 
 		if info {
-			printPoolInfo(poolName, poolOpts)
+			printPoolInfo(poolName, pool)
 			return
 		}
 
-		mineOpts.IpAddr = poolOpts.IpAddr
-		mineOpts.IpPort = poolOpts.IpPort
-		mineOpts.PoolPw = poolOpts.PoolPw
+		if poolOpts.Wallet == "" {
+			cmd.PrintErrln("Error: required flag(s) \"--wallet\" not set")
+			cmd.PrintErrf("Run '%v --help' for usage.\n", cmd.CommandPath())
+			os.Exit(1)
+		}
 
-		cmd.Parent().Run(cmd, []string{})
+		poolOpts.IpAddr = pool.IpAddr
+		poolOpts.IpPort = pool.IpPort
+		poolOpts.PoolPw = pool.PoolPw
+
+		miner.Mine(poolOpts)
 	},
 }
 
@@ -96,9 +105,8 @@ func init() {
 
 	poolCmd.Flags().BoolVarP(&list, "list", "l", false, "List known pool names")
 	poolCmd.Flags().BoolVarP(&info, "info", "i", false, "Print Pool information and exit")
-	poolCmd.Flags().StringVarP(&mineOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
-	poolCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
-	poolCmd.MarkFlagRequired("wallet")
+	poolCmd.Flags().StringVarP(&poolOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
+	poolCmd.Flags().IntVarP(&poolOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 
 	poolCmd.Flags().SortFlags = false
 	poolCmd.Flags().PrintDefaults()
