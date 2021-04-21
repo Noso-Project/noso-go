@@ -1,43 +1,43 @@
 #!/bin/bash
 
-# Pool: DevNoso
-#ADDRESS=23.95.233.179
-#PORT=8084
-#PASSWORD=UnMaTcHeD
+# #########################################
+# 
+# Please update POOL, WALLET, and CPU below
+# 
+# #########################################
 
-# Pool: nosopoolDE
-#ADDRESS=199.247.3.186
-#PORT=8082
-#PASSWORD=nosopoolDE
+# Valid Pools:
+#   devnoso
+#   dogfaceduke
+#   hdl
+#   nosopoolde
+#   russiapool
+#   yzpool
 
-# Pool: YZpool
-#ADDRESS=81.68.115.175
-#PORT=8082
-#PASSWORD=YZpool
+# TODO: Check ENVs for pool/wallet/cpu
+#
+# Example values:
+# POOL=yzpool
+# WALLET=N3nCJEtfWSB77HHv2tFdKGL7onevyDg
+# CPU=4
 
-# Pool: Hodl
-#ADDRESS=104.168.99.254
-#PORT=8082
-#PASSWORD=Hodl
+POOL=
+WALLET=
+CPU=
 
-# Pool: DogFaceDuke
-ADDRESS=noso.dukedog.io
-PORT=8082
-PASSWORD=duke
-
-# Pool: RussiaPool
-#ADDRESS=95.54.44.147
-#PORT=8080
-#PASSWORD=RussiaPool
-
-WALLET=[Your Wallet Address]
-CPU=[Number of CPUs]
+# #########################################
+# 
+# No user editable code below
+# 
+# #########################################
 
 while true; do
-  ./noso-go mine \
-    --address "${ADDRESS}" \
-    --port "${PORT}" \
-    --password "${PASSWORD}" \
-    --wallet "${WALLET}" \
-    --cpu "${CPU}"
+  ./noso-go mine pool \
+    "${POOL:?Variable not set or is empty}" \
+    --wallet "${WALLET:?Variable not set or is empty}" \
+    --cpu ${CPU:?Variable not set or is empty}
+
+  if [ "$?" != "0" ]; then
+      exit 1
+  fi
 done

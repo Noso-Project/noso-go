@@ -18,6 +18,7 @@
 .DS_Store
 bin/noso*
 packages/noso*
+packages/README.md
 *.tgz
 *.zip
 **/*.csv
