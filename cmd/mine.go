@@ -40,12 +40,14 @@ const (
 `
 )
 
-var mineOpts = &miner.Opts{}
+var (
+	mineOpts = &miner.Opts{}
+)
 
 var mineCmd = &cobra.Command{
 	Use:   "mine",
 	Short: "CPU mine for Noso coin",
-	Long: `Connect to a Noso pool and CPU mine for Noso coin
+	Long: `Connect to a specific Noso pool and CPU mine for Noso coin
 Example usage:
 ./noso-go mine \
 	--address noso.dukedog.io \
@@ -108,6 +110,7 @@ func mine(opts *miner.Opts) {
 
 	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
 	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
+	fmt.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
 	comms := miner.NewComms()
 	client := miner.NewTcpClient(opts, comms)
 
