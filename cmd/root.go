@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/leviable/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -35,8 +36,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "noso-go",
-	Short: "CLI application for mining Noso coin",
+	Version: miner.Version,
+	Use:     "noso-go",
+	Short:   "CLI application for mining Noso coin",
 	Long: `A CLI application for mining Noso coin from a pool
 Example usage:
 
@@ -74,6 +76,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.SetVersionTemplate(fmt.Sprintf("Version: %s\n", miner.Version))
 }
 
 // initConfig reads in config file and ENV variables if set.
