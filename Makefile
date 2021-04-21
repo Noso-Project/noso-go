@@ -43,26 +43,25 @@ package-%:
 	@case $(OS) in \
 		linux) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
-			cp examples/noso-go-run.sh bin/noso-go-run.sh;\
+			cp examples/noso-go.sh bin/noso-go.sh;\
 			chmod +x bin/$(APP);\
-			chmod +x examples/noso-go-run.sh;\
-			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md noso-go-run.sh); \
+			chmod +x examples/noso-go.sh;\
+			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md noso-go.sh); \
 			;; \
 		darwin) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
-			cp examples/noso-go-run.sh bin/noso-go-run.sh;\
+			cp examples/noso-go.sh bin/noso-go.sh;\
 			chmod +x bin/$(APP);\
-			chmod +x examples/noso-go-run.sh;\
-			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP) README.md noso-go-run.sh); \
+			chmod +x examples/noso-go.sh;\
+			(cd bin && zip ../packages/$(APP)-$(TAG)-$(OS).zip $(APP) README.md noso-go.sh); \
 			;; \
 		windows) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP).exe;\
+			cp examples/$(APP).bat bin/$(APP).bat;\
 			chmod +x bin/$(APP).exe;\
 			if [ "$(ARCH)" = "386" ]; then \
-				cp examples/$(APP)-win32.bat bin/$(APP).bat;\
 				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe $(APP).bat README.md); \
 			else \
-				cp examples/$(APP)-win64.bat bin/$(APP).bat;\
 				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe $(APP).bat README.md); \
 			fi \
 			;; \
@@ -71,5 +70,4 @@ package-%:
 .PHONY: clean
 clean:
 	rm -f bin/*
-	rm -f packages/*
 	rm -f packages/*
