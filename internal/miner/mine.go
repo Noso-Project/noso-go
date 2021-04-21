@@ -19,15 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package cmd
+package miner
 
 import (
 	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/leviable/noso-go/internal/miner"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -40,49 +37,14 @@ const (
 `
 )
 
-var (
-	mineOpts = &miner.Opts{}
-)
-
-var mineCmd = &cobra.Command{
-	Use:   "mine",
-	Short: "CPU mine for Noso coin",
-	Long: `Connect to a specific Noso pool and CPU mine for Noso coin
-Example usage:
-./noso-go mine \
-	--address noso.dukedog.io \
-	--port 8082 \
-	--password duke \
-	--wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
-	--cpu 4
-`,
-	Run: func(cmd *cobra.Command, args []string) {
-		mine(mineOpts)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(mineCmd)
-
-	mineCmd.Flags().StringVarP(&mineOpts.IpAddr, "address", "a", "", "Pool IP address (e.g. 'noso.dukedog.io' or '75.45.193.238'")
-	mineCmd.Flags().IntVar(&mineOpts.IpPort, "port", 8082, "Pool port")
-	mineCmd.Flags().StringVarP(&mineOpts.PoolPw, "password", "p", "", "Pool password")
-	mineCmd.Flags().StringVarP(&mineOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
-	mineCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 0, "Number of CPU cores to use")
-
-	mineCmd.MarkFlagRequired("address")
-	mineCmd.MarkFlagRequired("password")
-	mineCmd.MarkFlagRequired("wallet")
-}
-
-func mine(opts *miner.Opts) {
+func Mine(opts *Opts) {
 	var (
 
 		// last response from pool
 		resp string
 
 		// state vars
-		workerReports     map[string]miner.Report
+		workerReports     map[string]Report
 		poolAddr          string
 		minerSeed         string
 		targetBlock       int
@@ -99,9 +61,9 @@ func mine(opts *miner.Opts) {
 		totalHashes int
 		hashRate    int
 	)
-	fmt.Printf(HEADER, miner.Version)
+	fmt.Printf(HEADER, Version)
 
-	workerReports = make(map[string]miner.Report)
+	workerReports = make(map[string]Report)
 
 	// Set a date in the past so we can request payment immediately if we
 	// have a vested balance
@@ -111,21 +73,21 @@ func mine(opts *miner.Opts) {
 	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
 	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
 	fmt.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
-	comms := miner.NewComms()
-	client := miner.NewTcpClient(opts, comms)
+	comms := NewComms()
+	client := NewTcpClient(opts, comms)
 
 	// Start the job feeder goroutine
-	jobComms := miner.NewJobComms()
-	go miner.JobFeeder(comms, jobComms)
+	jobComms := NewJobComms()
+	go JobFeeder(comms, jobComms)
 
 	// Start the Solutions Manager goroutine
-	solComms := miner.NewSolutionComms(client.SendChan)
-	go miner.SolutionManager(solComms)
+	solComms := NewSolutionComms(client.SendChan)
+	go SolutionManager(solComms)
 
 	// Start the miner goroutines
 	ready := make(chan bool, 0)
 	for x := 1; x <= opts.Cpu; x++ {
-		go miner.Miner(strconv.Itoa(x), comms, ready)
+		go Miner(strconv.Itoa(x), comms, ready)
 	}
 
 	// TODO: Need to do a sync broadcast for ready
@@ -137,7 +99,7 @@ func mine(opts *miner.Opts) {
 	}()
 
 	// Create the payments.csv file if it doesn't already exist
-	miner.CreateLogPaymentsFile()
+	CreateLogPaymentsFile()
 
 	// TODO: Sending individual info (block, chars, string, etc
 	//       will probably lead to a race condition. Send a
@@ -168,7 +130,7 @@ func mine(opts *miner.Opts) {
 			// And we haven't requested payment in at least 10 minutes
 			if balance != "0" && blocksTillPayment > 0 && time.Since(paymentRequested) > 10*time.Minute {
 				client.SendChan <- "PAYMENT"
-				miner.LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
+				LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
 				paymentRequested = time.Now()
 			}
 		case <-comms.StepSolved:
@@ -188,7 +150,7 @@ func mine(opts *miner.Opts) {
 			totalHashes += report.Hashes
 			comms.HashRate <- hashRate
 		case resp = <-client.RecvChan:
-			go miner.Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
+			go Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
 		}
 	}
 }

@@ -86,7 +86,8 @@ Start mining with a pool
 		mineOpts.IpPort = poolOpts.IpPort
 		mineOpts.PoolPw = poolOpts.PoolPw
 
-		mine(mineOpts)
+		// TODO: Call the cobra mine command instead of calling Miner func
+		miner.Mine(mineOpts)
 	},
 }
 
