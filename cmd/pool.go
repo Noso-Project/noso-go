@@ -86,8 +86,7 @@ Start mining with a pool
 		mineOpts.IpPort = poolOpts.IpPort
 		mineOpts.PoolPw = poolOpts.PoolPw
 
-		// TODO: Call the cobra mine command instead of calling Miner func
-		miner.Mine(mineOpts)
+		cmd.Parent().Run(cmd, []string{})
 	},
 }
 
@@ -100,6 +99,9 @@ func init() {
 	poolCmd.Flags().StringVarP(&mineOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
 	poolCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 	poolCmd.MarkFlagRequired("wallet")
+
+	poolCmd.Flags().SortFlags = false
+	poolCmd.Flags().PrintDefaults()
 }
 
 func printPoolInfo(poolName string, poolOpts *miner.Opts) {

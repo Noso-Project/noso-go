@@ -59,4 +59,7 @@ func init() {
 	mineCmd.MarkFlagRequired("address")
 	mineCmd.MarkFlagRequired("password")
 	mineCmd.MarkFlagRequired("wallet")
+
+	mineCmd.Flags().SortFlags = false
+	mineCmd.Flags().PrintDefaults()
 }
