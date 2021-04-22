@@ -8,8 +8,8 @@ Rem #################################
 
 REM Valid Pools:
 REM   devnoso
-REM   dogfaceduke
-REM   hdl
+REM   dukedog.io
+REM   hodl
 REM   nosopoolde
 REM   russiapool
 REM   yzpool
