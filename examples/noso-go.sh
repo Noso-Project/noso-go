@@ -8,8 +8,8 @@
 
 # Valid Pools:
 #   devnoso
-#   dogfaceduke
-#   hdl
+#   dukedock.io
+#   hodl
 #   nosopoolde
 #   russiapool
 #   yzpool
