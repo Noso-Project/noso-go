@@ -91,6 +91,11 @@ Start mining with a pool
 			os.Exit(1)
 		}
 
+		if poolOpts.Cpu < 1 {
+			cmd.PrintErrln("Error: --cpu cannot be less than 1")
+			os.Exit(1)
+		}
+
 		poolOpts.IpAddr = pool.IpAddr
 		poolOpts.IpPort = pool.IpPort
 		poolOpts.PoolPw = pool.PoolPw

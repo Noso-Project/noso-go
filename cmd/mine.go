@@ -22,6 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"os"
+
 	"github.com/leviable/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +45,10 @@ Example usage:
 	--cpu 4
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		if mineOpts.Cpu < 1 {
+			cmd.PrintErrln("Error: --cpu cannot be less than 1")
+			os.Exit(1)
+		}
 		miner.Mine(mineOpts)
 	},
 }
@@ -54,7 +60,7 @@ func init() {
 	mineCmd.Flags().IntVar(&mineOpts.IpPort, "port", 8082, "Pool port")
 	mineCmd.Flags().StringVarP(&mineOpts.PoolPw, "password", "p", "", "Pool password")
 	mineCmd.Flags().StringVarP(&mineOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
-	mineCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 0, "Number of CPU cores to use")
+	mineCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 
 	mineCmd.MarkFlagRequired("address")
 	mineCmd.MarkFlagRequired("password")
