@@ -13,6 +13,14 @@ endif
 
 LDFLAGS := -ldflags "-X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'"
 
+ifeq ($(OS),Windows_NT) 
+WHICH := "where"
+else
+WHICH := "which"
+endif
+
+GODOG_NOT_INSTALLED := "Could not find godog in path. Run 'make install-godog'"
+
 .PHONY: all
 all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
 
@@ -66,6 +74,19 @@ package-%:
 			fi \
 			;; \
 	esac
+
+.PHONY: install-godog
+install-godog:
+	@go get github.com/cucumber/godog/cmd/godog@v0.11.0
+	godog version
+
+.PHONY: check_godog
+check_godog:
+	$(if $(shell $(WHICH) godog),,$(error $(GODOG_NOT_INSTALLED)))
+
+.PHONY: test
+test: check_godog
+	@(cd $(WORKDIR)/internal/miner && godog -f progress)
 
 .PHONY: clean
 clean:

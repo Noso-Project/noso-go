@@ -21,3 +21,25 @@ Feature: The parser validation
           And the comms.Balance channel should have "0"
           And the comms.BlocksTillPayment channel should have "-4"
           And the comms.Joined channel should be called
+
+    Scenario: PASSFAILED_01 parsed correctly
+         When I parse the "PASSFAILED_01" response
+         Then no comms channels get called
+
+    Scenario: PONG_01 parsed correctly
+         When I parse the "PONG_01" response
+         Then no comms channels get called
+
+    Scenario: POOLSTEPS_01 parsed correctly
+         When I parse the "POOLSTEPS_01" response
+          And the comms.Block channel should have 5890
+          And the comms.TargetString channel should have "POOLSTEPS_01TARGETSTRING"
+          And the comms.TargetChars channel should have 12
+          And the comms.Step channel should have 1
+          And the comms.Diff channel should have 109
+          And the comms.Balance channel should have "12345678"
+          And the comms.BlocksTillPayment channel should have "-5"
+
+    Scenario: STEPOK_01 parsed correctly
+         When I parse the "STEPOK_01" response
+         Then the comms.StepSolved channel should have 1

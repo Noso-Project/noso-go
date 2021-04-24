@@ -10,7 +10,11 @@ import (
 
 const (
 	// Responses
-	JOINOK_01 = "JOINOK JOINOK_01POOLADDRESS !3!!!!!!! PoolData 5891 JOINOK_01TARGETSTRING 11 0 102 0 -4 2215889"
+	JOINOK_01     = "JOINOK JOINOK_01POOLADDRESS !3!!!!!!! PoolData 5891 JOINOK_01TARGETSTRING 11 0 102 0 -4 2215889"
+	POOLSTEPS_01  = "POOLSTEPS PoolData 5890 POOLSTEPS_01TARGETSTRING 12 1 109 12345678 -5 2384383"
+	PASSFAILED_01 = "PASSFAILED"
+	PONG_01       = "PONG PoolData 5903 PONG_01TARGETSTRING 13 2 105 0 8 2364702"
+	STEPOK_01     = "STEPOK"
 )
 
 func checkInt(actual, expected int) error {
@@ -30,6 +34,10 @@ func checkString(actual, expected string) error {
 func NewParseTest() *ParseTest {
 	resps := make(map[string]string)
 	resps["JOINOK_01"] = JOINOK_01
+	resps["POOLSTEPS_01"] = POOLSTEPS_01
+	resps["PASSFAILED_01"] = PASSFAILED_01
+	resps["PONG_01"] = PONG_01
+	resps["STEPOK_01"] = STEPOK_01
 
 	return &ParseTest{
 		responses: resps,
@@ -60,8 +68,12 @@ func (p *ParseTest) iHaveAWalletAddressOf(wallet string) error {
 }
 
 func (p *ParseTest) iParseTheResponse(resp string) error {
-	go Parse(p.comms, p.poolIp, p.wallet, p.block, p.responses[resp])
-	return nil
+	if r, ok := p.responses[resp]; !ok {
+		return fmt.Errorf("Could not match %s to a known response", resp)
+	} else {
+		go Parse(p.comms, p.poolIp, p.wallet, p.block, r)
+		return nil
+	}
 }
 
 func (p *ParseTest) iTheCurrentBlockIs(block int) error {
@@ -118,6 +130,53 @@ func (p *ParseTest) theCommsTargetStringChannelShouldHave(expected string) error
 	return checkString(<-p.comms.TargetString, expected)
 }
 
+func (p *ParseTest) theCommsStepSolvedChannelShouldHave(expected int) error {
+	return checkInt(<-p.comms.StepSolved, expected)
+}
+
+func (p *ParseTest) noCommsChannelsGetCalled() error {
+	chanName := ""
+	select {
+	case <-p.comms.PoolAddr:
+		chanName = "comms.PoolAddr"
+	case <-p.comms.MinerSeed:
+		chanName = "comms.MinerSeed"
+	case <-p.comms.TargetString:
+		chanName = "comms.TargetString"
+	case <-p.comms.TargetChars:
+		chanName = "comms.TargetChars"
+	case <-p.comms.Block:
+		chanName = "comms.Block"
+	case <-p.comms.Step:
+		chanName = "comms.Step"
+	case <-p.comms.Diff:
+		chanName = "comms.Diff"
+	case <-p.comms.Balance:
+		chanName = "comms.Balance"
+	case <-p.comms.BlocksTillPayment:
+		chanName = "comms.BlocksTillPayment"
+	case <-p.comms.StepSolved:
+		chanName = "comms.StepSolved"
+	case <-p.comms.HashRate:
+		chanName = "comms.HashRate"
+	case <-p.comms.Jobs:
+		chanName = "comms.Jobs"
+	case <-p.comms.Reports:
+		chanName = "comms.Reports"
+	case <-p.comms.Solutions:
+		chanName = "comms.Solution"
+	case <-p.comms.Joined:
+		chanName = "comms.Joined"
+	case <-time.After(250 * time.Millisecond):
+	}
+
+	if chanName != "" {
+		return fmt.Errorf("Unexpectedly received on channel: %s", chanName)
+	}
+
+	return nil
+}
+
 func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	p := NewParseTest()
@@ -137,4 +196,6 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the comms\.Step channel should have (\d+)$`, p.theCommsStepChannelShouldHave)
 	ctx.Step(`^the comms\.TargetChars channel should have (\d+)$`, p.theCommsTargetCharsChannelShouldHave)
 	ctx.Step(`^the comms\.TargetString channel should have "([^"]*)"$`, p.theCommsTargetStringChannelShouldHave)
+	ctx.Step(`^the comms\.StepSolved channel should have (\d+)$`, p.theCommsStepSolvedChannelShouldHave)
+	ctx.Step(`^no comms channels get called$`, p.noCommsChannelsGetCalled)
 }
