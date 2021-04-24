@@ -79,7 +79,7 @@ func SolutionManager(solComms *SolutionComms) {
 					}
 				}
 				if drop > 0 {
-					fmt.Println("Already sent 10 stored responses, dropping the remaining %d stored solutions")
+					fmt.Printf("Already sent 10 stored responses, dropping the remaining %d stored solutions\n", drop)
 				}
 				storedSols[charsCurr] = make([]Solution, 0)
 			}

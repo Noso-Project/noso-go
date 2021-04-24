@@ -124,9 +124,9 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 						continue
 					}
 					seedBase := minerSeed[:len(minerSeed)-3]
-					seedX := string('!' + x)
-					seedY := string('!' + y)
-					seedZ := string('!' + z)
+					seedX := fmt.Sprint('!' + x)
+					seedY := fmt.Sprint('!' + y)
+					seedZ := fmt.Sprint('!' + z)
 					seed := seedBase + seedX + seedY + seedZ
 
 					// "_" and "(" are reserved characters in Noso
