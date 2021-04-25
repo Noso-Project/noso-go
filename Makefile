@@ -47,6 +47,7 @@ package-%:
 			chmod +x bin/$(APP);\
 			chmod +x examples/noso-go.sh;\
 			(cd bin && tar -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).tgz $(APP) README.md noso-go.sh); \
+			(cd bin && zip -zcvf ../packages/$(APP)-$(TAG)-$(OS)-$(ARCH).zip $(APP) README.md noso-go.sh); \
 			;; \
 		darwin) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP);\
