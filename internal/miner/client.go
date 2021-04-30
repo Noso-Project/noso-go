@@ -183,6 +183,7 @@ func (t *TcpClient) ping(manComms *managerComms) {
 			connected = false
 		case <-time.After(5 * time.Second):
 			t.SendChan <- fmt.Sprintf("PING %d", hashRate/1000)
+			t.comms.ClearHashRate <- struct{}{}
 		}
 	}
 	close(manComms.pingStopped)

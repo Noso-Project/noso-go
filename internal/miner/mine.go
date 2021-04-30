@@ -149,6 +149,8 @@ func Mine(opts *Opts) {
 			}
 			totalHashes += report.Hashes
 			comms.HashRate <- hashRate
+		case <-comms.ClearHashRate:
+			workerReports = make(map[string]Report)
 		case resp = <-client.RecvChan:
 			go Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
 		}
