@@ -19,6 +19,7 @@ func NewComms() *Comms {
 		Reports:           make(chan Report, 0),
 		Solutions:         make(chan Solution, 0),
 		Joined:            make(chan struct{}, 0),
+		RestartClient:     make(chan struct{}, 0),
 	}
 }
 
@@ -38,6 +39,7 @@ type Comms struct {
 	Reports           chan Report
 	Solutions         chan Solution
 	Joined            chan struct{}
+	RestartClient     chan struct{}
 }
 
 type Report struct {
