@@ -7,10 +7,8 @@
 # #########################################
 
 # Valid Pools:
-#   devnoso
 #   dukedog.io
-#   hodl
-#   nosopoolde
+#   mining.moe
 #   russiapool
 #   yzpool
 
