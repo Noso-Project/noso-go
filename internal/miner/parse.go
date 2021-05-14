@@ -30,7 +30,6 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 		comms.Joined <- struct{}{}
 	case PASSFAILED:
 		fmt.Println("Incorrect pool password")
-		comms.RestartClient <- struct{}{}
 	case PAYMENTOK:
 		LogPaymentResp(r, poolIp)
 	case PONG:

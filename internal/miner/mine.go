@@ -106,11 +106,6 @@ func Mine(opts *Opts) {
 	//       BlockUpdate struct instead with all info?
 	for {
 		select {
-		case <-comms.RestartClient:
-			client.Close()
-			// Wait 5 seconds between connection attempts
-			time.Sleep(5 * time.Second)
-			client = NewTcpClient(opts, comms)
 		case poolAddr = <-comms.PoolAddr:
 			jobComms.PoolAddr <- poolAddr
 		case minerSeed = <-comms.MinerSeed:
