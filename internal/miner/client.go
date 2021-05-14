@@ -7,30 +7,6 @@ import (
 	"time"
 )
 
-type managerComms struct {
-	connected    chan struct{}
-	disconnected chan struct{}
-	stop         chan struct{}
-	joined       chan struct{}
-	sendStopped  chan struct{}
-	recvStopped  chan struct{}
-	pingStopped  chan struct{}
-	quit         chan struct{}
-}
-
-func NewManagerComms() *managerComms {
-	return &managerComms{
-		connected:    make(chan struct{}, 0),
-		disconnected: make(chan struct{}, 0),
-		stop:         make(chan struct{}, 0),
-		joined:       make(chan struct{}, 0),
-		sendStopped:  make(chan struct{}, 0),
-		recvStopped:  make(chan struct{}, 0),
-		pingStopped:  make(chan struct{}, 0),
-		quit:         make(chan struct{}, 0),
-	}
-}
-
 func NewTcpClient(opts *Opts, comms *Comms) *TcpClient {
 	client := &TcpClient{
 		minerVer:  MinerName,
@@ -56,45 +32,62 @@ type TcpClient struct {
 	RecvChan  chan string
 	conn      net.Conn
 	connected chan interface{}
-	manComms  *managerComms
 }
 
-func (t *TcpClient) Close() {
-	close(t.manComms.quit)
+type managerComms struct {
+	connected    chan struct{}
+	disconnected chan struct{}
+	stop         chan struct{}
+	joined       chan struct{}
+	sendStopped  chan struct{}
+	recvStopped  chan struct{}
+	pingStopped  chan struct{}
+}
+
+func NewManagerComms() *managerComms {
+	return &managerComms{
+		connected:    make(chan struct{}, 0),
+		disconnected: make(chan struct{}, 0),
+		stop:         make(chan struct{}, 0),
+		joined:       make(chan struct{}, 0),
+		sendStopped:  make(chan struct{}, 0),
+		recvStopped:  make(chan struct{}, 0),
+		pingStopped:  make(chan struct{}, 0),
+	}
 }
 
 // Manages the TCP connection and send/recv/ping goroutines
 func (t *TcpClient) manager() {
 	for {
 		t.conn = nil
-		t.manComms = NewManagerComms()
+		manComms := NewManagerComms()
 
-		go t.send()
-		go t.recv()
-		go t.ping()
+		go t.send(manComms)
+		go t.recv(manComms)
+		go t.ping(manComms)
 
 		for running := true; running; {
 			select {
-			case <-t.manComms.disconnected:
-				close(t.manComms.stop)
+			case <-manComms.disconnected:
+				close(manComms.stop)
 				running = false
 			case <-t.comms.Joined:
-				close(t.manComms.joined)
+				close(manComms.joined)
 			}
 		}
 
 		// Wait for the goroutines to exit
 		// Should probably use a waitgroup here?
-		<-t.manComms.sendStopped
-		<-t.manComms.recvStopped
-		<-t.manComms.pingStopped
+		<-manComms.sendStopped
+		<-manComms.recvStopped
+		<-manComms.pingStopped
 
 		// Wait 5 seconds between connection attempts
 		time.Sleep(5 * time.Second)
 	}
 }
 
-func (t *TcpClient) send() {
+func (t *TcpClient) send(manComms *managerComms) {
 	var (
 		err error
 	)
@@ -102,13 +95,13 @@ func (t *TcpClient) send() {
 	if err != nil {
 		t.conn = nil
 		fmt.Printf("Error connecting to pool: %v\n", err)
-		t.Close()
-		close(t.manComms.sendStopped)
+		close(manComms.disconnected)
+		close(manComms.sendStopped)
 		return
 
 	} else {
 		t.conn.SetReadDeadline(time.Now().Add(20 * time.Second))
-		close(t.manComms.connected)
+		close(manComms.connected)
 	}
 
 	go t.join()
@@ -119,22 +112,22 @@ func (t *TcpClient) send() {
 			fmt.Printf("-> %s\n", msg)
 			msg = fmt.Sprintf("%s %s\n", t.auth, msg)
 			fmt.Fprintf(t.conn, msg)
-		case <-t.manComms.stop:
-			close(t.manComms.sendStopped)
+		case <-manComms.stop:
+			close(manComms.sendStopped)
 			return
 		}
 	}
 }
 
-func (t *TcpClient) recv() {
+func (t *TcpClient) recv(manComms *managerComms) {
 	// Block until connection established
 	select {
-	case <-t.manComms.connected:
-	case <-t.manComms.stop:
-		close(t.manComms.recvStopped)
+	case <-manComms.connected:
+	case <-manComms.stop:
+		close(manComms.recvStopped)
 		return
 	}
-	<-t.manComms.connected
+	<-manComms.connected
 	scanner := bufio.NewScanner(t.conn)
 	for connected := true; connected; {
 		if ok := scanner.Scan(); !ok {
@@ -150,19 +143,19 @@ func (t *TcpClient) recv() {
 		// Since we got something, reset the deadline
 		t.conn.SetReadDeadline(time.Now().Add(20 * time.Second))
 	}
-	close(t.manComms.disconnected)
-	close(t.manComms.recvStopped)
+	close(manComms.disconnected)
+	close(manComms.recvStopped)
 	return
 }
 
-func (t *TcpClient) ping() {
+func (t *TcpClient) ping(manComms *managerComms) {
 	var hashRate int
 
 	go func() {
 		for {
 			select {
 			case hashRate = <-t.comms.HashRate:
-			case <-t.manComms.stop:
+			case <-manComms.stop:
 				return
 			}
 		}
@@ -170,29 +163,29 @@ func (t *TcpClient) ping() {
 
 	// Block until connected to pool
 	select {
-	case <-t.manComms.connected:
-	case <-t.manComms.stop:
-		close(t.manComms.pingStopped)
+	case <-manComms.connected:
+	case <-manComms.stop:
+		close(manComms.pingStopped)
 		return
 	}
 
 	// Block until pool has been joined
 	select {
-	case <-t.manComms.joined:
-	case <-t.manComms.stop:
-		close(t.manComms.pingStopped)
+	case <-manComms.joined:
+	case <-manComms.stop:
+		close(manComms.pingStopped)
 		return
 	}
 
 	for connected := true; connected; {
 		select {
-		case <-t.manComms.stop:
+		case <-manComms.stop:
 			connected = false
 		case <-time.After(5 * time.Second):
 			t.SendChan <- fmt.Sprintf("PING %d", hashRate/1000)
 		}
 	}
-	close(t.manComms.pingStopped)
+	close(manComms.pingStopped)
 }
 
 func (t *TcpClient) join() {
