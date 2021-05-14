@@ -64,7 +64,7 @@ Start mining with a pool
 		if len(args) < 1 {
 			return errors.New("requires a pool name (i.e. 'noso-go mine pool yzpool')")
 		}
-		poolName := args[0]
+		poolName := strings.ToLower(args[0])
 		if _, ok := pools[poolName]; !ok {
 			return errors.New("Unrecognized pool name. Use 'noso-go mine pool --list' for list of pools")
 		}
@@ -77,7 +77,7 @@ Start mining with a pool
 			return
 		}
 
-		poolName := args[0]
+		poolName := strings.ToLower(args[0])
 		pool := pools[poolName]
 
 		if info {
@@ -142,34 +142,39 @@ func loadPools() {
 	// TODO: Use github.com/markbates/pkger to package a Yaml
 	//       file instead of hard coding these here
 	pools = make(map[string]*miner.Opts)
-	pools["devnoso"] = &miner.Opts{
-		IpAddr: "23.95.233.179",
-		IpPort: 8084,
-		PoolPw: "UnMaTcHeD",
-	}
-	pools["nosopoolde"] = &miner.Opts{
-		IpAddr: "199.247.3.186",
-		IpPort: 8082,
-		PoolPw: "nosopoolDE",
-	}
 	pools["yzpool"] = &miner.Opts{
 		IpAddr: "81.68.115.175",
 		IpPort: 8082,
 		PoolPw: "YZpool",
-	}
-	pools["hodl"] = &miner.Opts{
-		IpAddr: "104.168.99.254",
-		IpPort: 8082,
-		PoolPw: "Hodl",
 	}
 	pools["dukedog.io"] = &miner.Opts{
 		IpAddr: "noso.dukedog.io",
 		IpPort: 8082,
 		PoolPw: "duke",
 	}
+	pools["dukedogio"] = &miner.Opts{
+		IpAddr: "noso.dukedog.io",
+		IpPort: 8082,
+		PoolPw: "duke",
+	}
+	pools["dukedog"] = &miner.Opts{
+		IpAddr: "noso.dukedog.io",
+		IpPort: 8082,
+		PoolPw: "duke",
+	}
 	pools["russiapool"] = &miner.Opts{
 		IpAddr: "95.54.44.147",
-		IpPort: 8080,
+		IpPort: 8082,
 		PoolPw: "RussiaPool",
+	}
+	pools["mining.moe"] = &miner.Opts{
+		IpAddr: "Node1.mining.moe",
+		IpPort: 8082,
+		PoolPw: "miningmoe",
+	}
+	pools["miningmoe"] = &miner.Opts{
+		IpAddr: "Node1.mining.moe",
+		IpPort: 8082,
+		PoolPw: "miningmoe",
 	}
 }

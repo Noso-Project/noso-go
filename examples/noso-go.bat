@@ -7,10 +7,8 @@ Rem #################################
 
 
 REM Valid Pools:
-REM   devnoso
 REM   dukedog.io
-REM   hodl
-REM   nosopoolde
+REM   mining.moe
 REM   russiapool
 REM   yzpool
 
