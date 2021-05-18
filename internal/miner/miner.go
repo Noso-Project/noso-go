@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -14,15 +15,16 @@ const (
 	hashChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func Miner(worker_num string, comms *Comms, ready chan bool) {
+func Miner(workerNum string, comms *Comms, ready chan bool) {
 	var (
-		jobStart     time.Time
-		jobDuration  time.Duration
-		buff         *bytes.Buffer
-		hashStr      string
-		target_len   int
-		target_large string
-		target_small string
+		jobStart    time.Time
+		jobDuration time.Duration
+		buff        *bytes.Buffer
+		hashStr     string
+		targets     []string
+		targetLen   int
+		targetMin   int
+		poolDepth   int
 
 		// From hash_22
 		seedLen   int
@@ -35,21 +37,39 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 		hashCount int
 	)
 
+	poolDepth = 3
+
 	encoded := make([]byte, 64)
 
 	// Wait until ready
 	<-ready
 
-	// Search for TargetChars - 1 solutions
-	// Report any TargetChars solutions immediately
-	// Store any TargetChars - 1 solutions until the steps drop
+	// - Search for TargetChars[:poolDepth] solutions
+	// - Report any TargetChars[:poolDepth] solutions immediately -> Proof of Participation
+	// - Report any TargetChars solutions immediately
+	// - Store any (TargetChars - 1) > poolDepth solutions until the step
+	//   difficulty drops
 	for job := range comms.Jobs {
 		jobStart = time.Now()
-		target_large = job.TargetString[:job.TargetChars]
-		target_small = job.TargetString[:job.TargetChars-1]
+		targetMin = job.TargetChars - poolDepth
 		buff = bytes.NewBuffer(job.SeedFullBytes)
 		seedLen = buff.Len()
 		hashCount = 0
+
+		targets = make([]string, poolDepth+1)
+
+		for i := 0; i < poolDepth+1; i++ {
+			targets[i] = job.TargetString[:targetMin+i]
+		}
+
+		// Sanity check: the last item in targets should be a full solution
+		// If it isn't, panic
+		if targets[len(targets)-1] != job.TargetString[:job.TargetChars] {
+			panic("Miner did not correctly build workload from Job")
+		}
+
+		// 5 was chosen so that it would take roughly 1 second to iterate
+		// through all the hashes on a modern-ish cpu thread
 		for _, w = range hashChars[:5] {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
@@ -67,17 +87,25 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 						hex.Encode(encoded, tmp[:])
 						val = BytesToString(encoded)
 
-						// We could almost certainly increase hashrate if we
-						// could search the sha sum bytes rather than converting
-						// to a string first and then doing a string search
-						// Also, need to benchmark doing a small substring search
-						if !strings.Contains(val, target_small) {
+						// TODO: We could almost certainly increase hashrate if we
+						//       could search the sha sum bytes rather than converting
+						//       to a string first and then doing a string search
+						// TODO: Benchmark doing a small substring search
+						if !strings.Contains(val, targets[0]) {
+							// targets[0] is that absolute minimum that a pool will accept
+							// if we dont match that minimum, we can drop this solution
+							// and continue with the hashing
 							continue
-						} else if strings.Contains(val, target_large) {
-							target_len = job.TargetChars
-						} else {
-							target_len = job.TargetChars - 1
 						}
+
+						targetLen = targetMin
+						for idx, t := range targets[1:] {
+							if !strings.Contains(val, t) {
+								break
+							}
+							targetLen = targetMin + idx
+						}
+						fmt.Println("****************\nFOUND ONE\n*****************")
 
 						hashStr = string(w) + string(x) + string(y) + string(z)
 						solution := make([]byte, len(val))
@@ -87,11 +115,11 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 							Seed:       job.SeedMiner,
 							HashStr:    job.SeedPostfix + hashStr,
 							Block:      job.Block,
-							Chars:      target_len,
+							Chars:      targetLen,
 							Step:       job.Step,
 							SolvedHash: *(*string)(unsafe.Pointer(&solution)),
-							TargetLen:  target_len,
-							Target:     job.TargetString[:target_len],
+							TargetLen:  targetLen,
+							Target:     job.TargetString[:targetLen],
 							FullTarget: job.TargetString[:job.TargetChars],
 						}
 					}
@@ -99,7 +127,7 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 			}
 		}
 		jobDuration = time.Since(jobStart)
-		comms.Reports <- Report{WorkerNum: worker_num, Hashes: hashCount, Duration: jobDuration}
+		comms.Reports <- Report{WorkerNum: workerNum, Hashes: hashCount, Duration: jobDuration}
 	}
 }
 

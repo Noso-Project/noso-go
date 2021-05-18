@@ -73,7 +73,7 @@ func SolutionManager(solComms *SolutionComms) {
 				drop := 0
 				for idx, s := range sols {
 					if idx < 10 {
-						solComms.SendChan <- fmt.Sprintf("STEP %d %s %s", s.Block, s.Seed, s.HashStr)
+						solComms.SendChan <- fmt.Sprintf("STEP %d %s %s %d", s.Block, s.Seed, s.HashStr, s.Chars)
 					} else {
 						drop++
 					}
@@ -89,14 +89,14 @@ func SolutionManager(solComms *SolutionComms) {
 				// Drop stale solutions
 				fmt.Printf("Dropping Solution (old block): %+v\n", sol)
 				continue
-			} else if charsLrg-sol.Chars > 1 {
-				// Drop solutions where the step difficulty has already dropped
-				// and so these will never get sent. For instance, if diff is 95
-				// and we are on step 6, the miner will find solutions that are 8
-				// chars long, but those will never be valid
-				fmt.Printf("Dropping Solution (low diff): %+v\n", sol)
-				continue
-			} else if step < charsChg && sol.Chars < charsLrg {
+				// } else if charsLrg-sol.Chars > 1 {
+				// 	// Drop solutions where the step difficulty has already dropped
+				// 	// and so these will never get sent. For instance, if diff is 95
+				// 	// and we are on step 6, the miner will find solutions that are 8
+				// 	// chars long, but those will never be valid
+				// 	fmt.Printf("Dropping Solution (low diff): %+v\n", sol)
+				// 	continue
+			} else if step < charsChg && (sol.Chars+1) == charsLrg {
 				// Found a future solution, store it
 				// Should only store 10 max
 				// TODO: Max number of future solutions that can be accepted
@@ -112,7 +112,7 @@ func SolutionManager(solComms *SolutionComms) {
 				}
 			} else {
 				// Any solution that gets here is valid: send it
-				solComms.SendChan <- fmt.Sprintf("STEP %d %s %s", sol.Block, sol.Seed, sol.HashStr)
+				solComms.SendChan <- fmt.Sprintf("STEP %d %s %s %d", sol.Block, sol.Seed, sol.HashStr, sol.Chars)
 				if sol.Target == sol.FullTarget {
 					printFoundSolution(sol, false)
 				}
