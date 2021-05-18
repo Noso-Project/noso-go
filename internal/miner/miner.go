@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -51,7 +50,7 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 	//   difficulty drops
 	for job := range comms.Jobs {
 		jobStart = time.Now()
-		targetMin = job.TargetChars - poolDepth
+		targetMin = (job.Diff / 10) + 1 - poolDepth
 		buff = bytes.NewBuffer(job.SeedFullBytes)
 		seedLen = buff.Len()
 		hashCount = 0
@@ -69,7 +68,7 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 		}
 
 		// 5 was chosen so that it would take roughly 1 second to iterate
-		// through all the hashes on a modern-ish cpu thread
+		// through all the hashes on one modern-ish cpu thread
 		for _, w = range hashChars[:5] {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
@@ -99,13 +98,12 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 						}
 
 						targetLen = targetMin
-						for idx, t := range targets[1:] {
+						for _, t := range targets[1:] {
 							if !strings.Contains(val, t) {
 								break
 							}
-							targetLen = targetMin + idx
+							targetLen++
 						}
-						fmt.Println("****************\nFOUND ONE\n*****************")
 
 						hashStr = string(w) + string(x) + string(y) + string(z)
 						solution := make([]byte, len(val))
@@ -115,7 +113,7 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 							Seed:       job.SeedMiner,
 							HashStr:    job.SeedPostfix + hashStr,
 							Block:      job.Block,
-							Chars:      targetLen,
+							Chars:      job.TargetChars,
 							Step:       job.Step,
 							SolvedHash: *(*string)(unsafe.Pointer(&solution)),
 							TargetLen:  targetLen,
