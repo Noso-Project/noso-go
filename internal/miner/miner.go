@@ -61,12 +61,6 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 			targets[i] = job.TargetString[:targetMin+i]
 		}
 
-		// Sanity check: the last item in targets should be a full solution
-		// If it isn't, panic
-		if targets[len(targets)-1] != job.TargetString[:job.TargetChars] {
-			panic("Miner did not correctly build workload from Job")
-		}
-
 		// 5 was chosen so that it would take roughly 1 second to iterate
 		// through all the hashes on one modern-ish cpu thread
 		for _, w = range hashChars[:5] {

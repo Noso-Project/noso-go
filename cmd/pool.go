@@ -112,6 +112,7 @@ func init() {
 	poolCmd.Flags().BoolVarP(&info, "info", "i", false, "Print Pool information and exit")
 	poolCmd.Flags().StringVarP(&poolOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
 	poolCmd.Flags().IntVarP(&poolOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
+	poolCmd.Flags().BoolVarP(&poolOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 
 	poolCmd.Flags().SortFlags = false
 	poolCmd.Flags().PrintDefaults()
@@ -176,5 +177,10 @@ func loadPools() {
 		IpAddr: "Node1.mining.moe",
 		IpPort: 8082,
 		PoolPw: "miningmoe",
+	}
+	pools["devnoso"] = &miner.Opts{
+		IpAddr: "185.239.236.85",
+		IpPort: 8082,
+		PoolPw: "UnMaTcHeD",
 	}
 }

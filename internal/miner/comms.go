@@ -14,6 +14,7 @@ func NewComms() *Comms {
 		Balance:           make(chan string, 0),
 		BlocksTillPayment: make(chan int, 0),
 		StepSolved:        make(chan int, 0),
+		StepFailed:        make(chan int, 0),
 		HashRate:          make(chan int, 0),
 		Jobs:              make(chan Job, 0),
 		Reports:           make(chan Report, 0),
@@ -33,6 +34,7 @@ type Comms struct {
 	Balance           chan string
 	BlocksTillPayment chan int
 	StepSolved        chan int
+	StepFailed        chan int
 	HashRate          chan int
 	Jobs              chan Job
 	Reports           chan Report
