@@ -136,13 +136,16 @@ func Mine(opts *Opts) {
 			jobComms.TargetString <- targetString
 		case targetChars = <-comms.TargetChars:
 			jobComms.TargetChars <- targetChars
-		case targetBlock = <-comms.Block:
+		case newBlock := <-comms.Block:
+			if newBlock != targetBlock {
+				stepsAccepted += sumSteps(popSlice)
+				popSlice = make([]int, 0)
+				sharesEarned += sharesEarnedBlk
+				sharesEarnedBlk = 0
+			}
+			targetBlock = newBlock
 			jobComms.Block <- targetBlock
 			solComms.Block <- targetBlock
-			stepsAccepted += sumSteps(popSlice)
-			popSlice = make([]int, 0)
-			sharesEarned += sharesEarnedBlk
-			sharesEarnedBlk = 0
 		case currentStep = <-comms.Step:
 			jobComms.Step <- currentStep
 			solComms.Step <- currentStep
@@ -163,11 +166,13 @@ func Mine(opts *Opts) {
 			popSlice = append(popSlice, 0)
 			popCount++
 		case shares := <-comms.StepSolved:
-			popSlice[len(popSlice)-1]++
+			if len(popSlice) > 0 {
+				popSlice[len(popSlice)-1]++
+			}
 			sharesEarned += shares
 			sharesEarnedBlk += shares
 		case <-comms.StepFailed:
-			if popSlice[len(popSlice)-1] > 0 {
+			if len(popSlice) > 0 && popSlice[len(popSlice)-1] > 0 {
 				popSlice[len(popSlice)-1]--
 			}
 		case sol := <-comms.Solutions:
