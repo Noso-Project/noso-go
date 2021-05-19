@@ -34,7 +34,7 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	case PAYMENTOK:
 		LogPaymentResp(r, poolIp)
 	case PONG:
-		// NoOp
+		comms.Pong <- struct{}{}
 	case POOLSTEPS:
 		poolData(comms, r, 0)
 	case STEPOK:
