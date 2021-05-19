@@ -36,7 +36,7 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 		hashCount int
 	)
 
-	poolDepth = 3
+	poolDepth = 2
 
 	encoded := make([]byte, 64)
 
