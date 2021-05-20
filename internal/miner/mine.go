@@ -52,6 +52,7 @@ func Mine(opts *Opts) {
 		targetChars       int
 		currentStep       int
 		currentDiff       int
+		poolDepth         int
 		popSlice          []int
 		popCount          int
 		stepsAccepted     int
@@ -152,6 +153,8 @@ func Mine(opts *Opts) {
 		case currentDiff = <-comms.Diff:
 			jobComms.Diff <- currentDiff
 			solComms.Diff <- currentDiff
+		case poolDepth = <-comms.PoolDepth:
+			jobComms.PoolDepth <- poolDepth
 		case balance = <-comms.Balance:
 		case blocksTillPayment = <-comms.BlocksTillPayment:
 			// If we have a non-zero balance

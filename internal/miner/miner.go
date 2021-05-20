@@ -23,7 +23,6 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 		targets     []string
 		targetLen   int
 		targetMin   int
-		poolDepth   int
 
 		// From hash_22
 		seedLen   int
@@ -35,8 +34,6 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 		val       string
 		hashCount int
 	)
-
-	poolDepth = 2
 
 	encoded := make([]byte, 64)
 
@@ -50,14 +47,14 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 	//   difficulty drops
 	for job := range comms.Jobs {
 		jobStart = time.Now()
-		targetMin = (job.Diff / 10) + 1 - poolDepth
+		targetMin = (job.Diff / 10) + 1 - job.PoolDepth
 		buff = bytes.NewBuffer(job.SeedFullBytes)
 		seedLen = buff.Len()
 		hashCount = 0
 
-		targets = make([]string, poolDepth+1)
+		targets = make([]string, job.PoolDepth+1)
 
-		for i := 0; i < poolDepth+1; i++ {
+		for i := 0; i < job.PoolDepth+1; i++ {
 			targets[i] = job.TargetString[:targetMin+i]
 		}
 

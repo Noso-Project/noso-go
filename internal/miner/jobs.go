@@ -16,6 +16,7 @@ func NewJobComms() *JobComms {
 		Diff:         make(chan int, 0),
 		TargetChars:  make(chan int, 0),
 		TargetString: make(chan string, 0),
+		PoolDepth:    make(chan int, 0),
 	}
 }
 
@@ -27,6 +28,7 @@ type JobComms struct {
 	Diff         chan int
 	TargetChars  chan int
 	TargetString chan string
+	PoolDepth    chan int
 }
 
 type Job struct {
@@ -40,6 +42,7 @@ type Job struct {
 	Diff          int
 	Block         int
 	Step          int
+	PoolDepth     int
 }
 
 func JobFeeder(comms *Comms, jobComms *JobComms) {
@@ -52,8 +55,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 		targetChars  int
 		targetString string
 		job          Job
-		running      bool
 		postfix      string
+		poolDepth    int
 	)
 
 	verSha := sha256.Sum256([]byte(MinerName))
@@ -76,6 +79,7 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 			case diff = <-jobComms.Diff:
 			case block = <-jobComms.Block:
 			case step = <-jobComms.Step:
+			case poolDepth = <-jobComms.PoolDepth:
 			}
 
 			if poolAddr == "" {
@@ -92,11 +96,13 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 				continue
 			} else if targetString == "" {
 				continue
+			} else if poolDepth == 0 {
+				continue
 			} else if minerSeed == "" {
 				continue
 			} else {
-				ready <- struct{}{}
-				break
+				close(ready)
+				return
 			}
 		}
 	}()
@@ -134,15 +140,16 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 						continue
 					}
 
+				loop:
 					for num := 1; num < 999; num++ {
 						postfix = ver + fmt.Sprintf("%03d", num)
-						running = true
 						fullSeed := seed + poolAddr + postfix
 						fullSeedBytes := []byte(fullSeed)
-						for running {
+						for {
 							job = Job{
 								TargetString:  strings.ToLower(targetString),
 								TargetChars:   targetChars,
+								PoolDepth:     poolDepth,
 								Diff:          diff,
 								Block:         block,
 								SeedMiner:     seed,
@@ -159,6 +166,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 								job.TargetChars = targetChars
 							case targetString = <-jobComms.TargetString:
 								job.TargetString = targetString
+							case poolDepth = <-jobComms.PoolDepth:
+								job.PoolDepth = poolDepth
 							case diff = <-jobComms.Diff:
 								job.Diff = diff
 							case block = <-jobComms.Block:
@@ -166,7 +175,7 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 							case step = <-jobComms.Step:
 								job.Step = step
 							case comms.Jobs <- job:
-								running = false
+								continue loop
 							}
 						}
 					}

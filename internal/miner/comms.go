@@ -11,6 +11,7 @@ func NewComms() *Comms {
 		Block:             make(chan int, 0),
 		Step:              make(chan int, 0),
 		Diff:              make(chan int, 0),
+		PoolDepth:         make(chan int, 0),
 		Balance:           make(chan string, 0),
 		BlocksTillPayment: make(chan int, 0),
 		StepSolved:        make(chan int, 0),
@@ -32,6 +33,7 @@ type Comms struct {
 	Block             chan int
 	Step              chan int
 	Diff              chan int
+	PoolDepth         chan int
 	Balance           chan string
 	BlocksTillPayment chan int
 	StepSolved        chan int
