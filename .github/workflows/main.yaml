@@ -22,8 +22,16 @@ jobs:
       - name: Checkout master
         uses: actions/checkout@master
 
-      - name: Build binary
+      - name: Build ${{ matrix.binary }}
         run: make ${{ matrix.binary }}
+
+      - name: Compress ${{ matrix.binary }}
+        uses: crazy-max/ghaction-upx@v1
+        with:
+          version: latest
+          files: |
+            ./bin/${{ matrix.binary }}
+          args: -fq
 
       - uses: actions/upload-artifact@v2
         with:
