@@ -12,7 +12,6 @@ const (
 	dialTimeout       = 5 * time.Second
 	connectionTimeout = 20 * time.Second
 	reconnectSleep    = 5 * time.Second
-	// reconnectSleep = 500 * time.Millisecond
 )
 
 func NewTcpClient(opts *Opts, comms *Comms) *TcpClient {

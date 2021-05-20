@@ -56,8 +56,6 @@ Example usage:
 func init() {
 	rootCmd.AddCommand(mineCmd)
 
-	// TODO: add --show-pop flag to show or not show PoP solutions
-	// TODO: add --show-step flag to show or not show STEP solutions
 	mineCmd.Flags().StringVarP(&mineOpts.IpAddr, "address", "a", "", "Pool IP address (e.g. 'noso.dukedog.io' or '75.45.193.238'")
 	mineCmd.Flags().IntVar(&mineOpts.IpPort, "port", 8082, "Pool port")
 	mineCmd.Flags().StringVarP(&mineOpts.PoolPw, "password", "p", "", "Pool password")

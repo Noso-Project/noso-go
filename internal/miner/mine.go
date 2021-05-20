@@ -28,10 +28,12 @@ import (
 )
 
 const (
-	HEADER = `# ##########################################################
+	HEADER = `
+# ##########################################################
 #
 # noso-go %s by levi.noecker@gmail.com (c)2021
 # https://github.com/leviable/noso-go
+# Commit: %s
 #
 # ##########################################################
 `
@@ -66,7 +68,7 @@ func Mine(opts *Opts) {
 		totalHashes int
 		hashRate    int
 	)
-	fmt.Printf(HEADER, Version)
+	fmt.Printf(HEADER, Version, Commit)
 
 	workerReports = make(map[string]Report)
 	popSlice = make([]int, 0)

@@ -40,11 +40,6 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 	// Wait until ready
 	<-ready
 
-	// - Search for TargetChars[:poolDepth] solutions
-	// - Report any TargetChars[:poolDepth] solutions immediately -> Proof of Participation
-	// - Report any TargetChars solutions immediately
-	// - Store any (TargetChars - 1) > poolDepth solutions until the step
-	//   difficulty drops
 	for job := range comms.Jobs {
 		jobStart = time.Now()
 		targetMin = (job.Diff / 10) + 1 - job.PoolDepth

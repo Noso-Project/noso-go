@@ -7,11 +7,14 @@ TAG := $(shell git describe --tags --exact-match $(REVISION) 2>/dev/null)
 
 ifneq ($(TAG),)
 VER := $(TAG)
+LDVER := -X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'
 else
-VER := commit-$(REVISION)
+LDVER :=
 endif
 
-LDFLAGS := -ldflags "-s -w -X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'"
+LDREV := -X 'github.com/leviable/noso-go/internal/miner.Commit=$(REVISION)'
+
+LDFLAGS := -ldflags "-s -w $(LDVER) $(LDREV)"
 
 .PHONY: all
 all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64

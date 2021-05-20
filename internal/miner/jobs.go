@@ -4,7 +4,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
+)
+
+// ! is 33
+// % is 37
+// ( is 40
+// _ is 95
+// _ and ( are reserved chars, skip them
+// Wallet doesn't like %, skip it
+const (
+	hashableSeedChars = "!\"#$&')*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|"
 )
 
 func NewJobComms() *JobComms {
@@ -109,36 +121,22 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 
 	<-ready
 
-	// ! is 33
-	// % is 37
-	// ( is 40
-	// _ is 95
-	// _ and ( are reserved chars, skip them
-	// Wallet doesn't like %, skip it
+	// Randomize seed chars so that if a miner restarts in the middle of a block,
+	// it isn't rehashing already hashed values
+	seedChars := []rune(hashableSeedChars)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(seedChars), func(i, j int) { seedChars[i], seedChars[j] = seedChars[j], seedChars[i] })
 
 	for {
-		for x := 0; x < 92; x++ {
-			if x == 4 || x == 7 || x == 62 {
-				continue
-			}
-			for y := 0; y < 92; y++ {
-				if y == 4 || y == 7 || y == 62 {
-					continue
-				}
-				for z := 0; z < 92; z++ {
-					if z == 4 || z == 7 || z == 62 {
-						continue
-					}
-					seedBase := minerSeed[:len(minerSeed)-3]
-					seedX := string('!' + x)
-					seedY := string('!' + y)
-					seedZ := string('!' + z)
-					seed := seedBase + seedX + seedY + seedZ
+		for _, x := range seedChars {
+			for _, y := range seedChars {
+				for _, z := range seedChars {
 
-					// "_" and "(" are reserved characters in Noso
-					if strings.Contains(seed, "_") || strings.Contains(seed, "(") {
-						continue
-					}
+					seedBase := minerSeed[:len(minerSeed)-3]
+					seedX := string(x)
+					seedY := string(y)
+					seedZ := string(z)
+					seed := seedBase + seedX + seedY + seedZ
 
 				loop:
 					for num := 1; num < 999; num++ {
