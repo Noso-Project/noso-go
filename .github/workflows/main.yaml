@@ -9,17 +9,26 @@ jobs:
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        binary: [noso-go-darwin-amd64,
+                 noso-go-linux-386,
+                 noso-go-linux-amd64,
+                 noso-go-linux-arm,
+                 noso-go-linux-arm64,
+                 noso-go-windows-386,
+                 noso-go-windows-amd64]
     steps:
       - name: Checkout master
         uses: actions/checkout@master
 
       - name: Build binary
-        run: make all
+        run: make ${{ matrix.binary }}
 
       - uses: actions/upload-artifact@v2
         with:
           path: |
-            bin/noso-go*
+            bin/${{ matrix.binary }}
             README.md
 
   test-linux:
