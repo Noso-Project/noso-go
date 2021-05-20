@@ -3,6 +3,7 @@ package miner
 import "fmt"
 
 var (
+	Commit    = "0000000"
 	Version   = "v0.0.0"
-	MinerName = fmt.Sprintf("noso-go-%s", Version)
+	MinerName = fmt.Sprintf("ng%s", Version[1:])
 )

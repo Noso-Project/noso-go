@@ -28,10 +28,12 @@ import (
 )
 
 const (
-	HEADER = `# ##########################################################
+	HEADER = `
+# ##########################################################
 #
 # noso-go %s by levi.noecker@gmail.com (c)2021
 # https://github.com/leviable/noso-go
+# Commit: %s
 #
 # ##########################################################
 `
@@ -52,7 +54,12 @@ func Mine(opts *Opts) {
 		targetChars       int
 		currentStep       int
 		currentDiff       int
-		stepsSolved       int
+		poolDepth         int
+		popSlice          []int
+		popCount          int
+		stepsAccepted     int
+		sharesEarned      int
+		sharesEarnedBlk   int
 		blocksTillPayment int
 		balance           string
 		paymentRequested  time.Time
@@ -61,9 +68,10 @@ func Mine(opts *Opts) {
 		totalHashes int
 		hashRate    int
 	)
-	fmt.Printf(HEADER, Version)
+	fmt.Printf(HEADER, Version, Commit)
 
 	workerReports = make(map[string]Report)
+	popSlice = make([]int, 0)
 
 	// Set a date in the past so we can request payment immediately if we
 	// have a vested balance
@@ -82,7 +90,7 @@ func Mine(opts *Opts) {
 
 	// Start the Solutions Manager goroutine
 	solComms := NewSolutionComms(client.SendChan)
-	go SolutionManager(solComms)
+	go SolutionManager(solComms, opts.ShowPop)
 
 	// Start the miner goroutines
 	ready := make(chan bool, 0)
@@ -101,6 +109,23 @@ func Mine(opts *Opts) {
 	// Create the payments.csv file if it doesn't already exist
 	CreateLogPaymentsFile()
 
+	// Print a reward status every 60 seconds
+	go func() {
+		for {
+			select {
+			case <-time.After(60 * time.Second):
+				fmt.Printf(
+					rewardMsg,
+					targetBlock,     // For Block %d
+					sharesEarnedBlk, // Shares Earned :
+					len(popSlice),   // PoP Sent :
+					sharesEarned,    // Shares Earned :
+					popCount,        // PoP Sent :
+				)
+			}
+		}
+	}()
+
 	// TODO: Sending individual info (block, chars, string, etc
 	//       will probably lead to a race condition. Send a
 	//       BlockUpdate struct instead with all info?
@@ -114,7 +139,14 @@ func Mine(opts *Opts) {
 			jobComms.TargetString <- targetString
 		case targetChars = <-comms.TargetChars:
 			jobComms.TargetChars <- targetChars
-		case targetBlock = <-comms.Block:
+		case newBlock := <-comms.Block:
+			if newBlock != targetBlock {
+				stepsAccepted += sumSteps(popSlice)
+				popSlice = make([]int, 0)
+				sharesEarned += sharesEarnedBlk
+				sharesEarnedBlk = 0
+			}
+			targetBlock = newBlock
 			jobComms.Block <- targetBlock
 			solComms.Block <- targetBlock
 		case currentStep = <-comms.Step:
@@ -123,6 +155,8 @@ func Mine(opts *Opts) {
 		case currentDiff = <-comms.Diff:
 			jobComms.Diff <- currentDiff
 			solComms.Diff <- currentDiff
+		case poolDepth = <-comms.PoolDepth:
+			jobComms.PoolDepth <- poolDepth
 		case balance = <-comms.Balance:
 		case blocksTillPayment = <-comms.BlocksTillPayment:
 			// If we have a non-zero balance
@@ -133,9 +167,19 @@ func Mine(opts *Opts) {
 				LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
 				paymentRequested = time.Now()
 			}
-		case <-comms.StepSolved:
-			stepsSolved += 1
-			fmt.Printf("Miner has solved %d steps\n", stepsSolved)
+		case <-solComms.StepSent:
+			popSlice = append(popSlice, 0)
+			popCount++
+		case shares := <-comms.StepSolved:
+			if len(popSlice) > 0 {
+				popSlice[len(popSlice)-1]++
+			}
+			sharesEarned += shares
+			sharesEarnedBlk += shares
+		case <-comms.StepFailed:
+			if len(popSlice) > 0 && popSlice[len(popSlice)-1] > 0 {
+				popSlice[len(popSlice)-1]--
+			}
 		case sol := <-comms.Solutions:
 			solComms.Solution <- sol
 		case report := <-comms.Reports:
@@ -154,3 +198,33 @@ func Mine(opts *Opts) {
 		}
 	}
 }
+
+func sumSteps(popSlice []int) (sum int) {
+	if len(popSlice) == 0 {
+		return 0
+	}
+	for _, v := range popSlice {
+		sum += v
+	}
+
+	return
+}
+
+const rewardMsg = `
+************************************
+
+Current Rewards Status
+
+For Block %d
+---------------
+Shares Earned  : %d
+PoP Sent       : %d
+
+Total
+---------------
+Shares Earned  : %d
+PoP Sent       : %d
+
+************************************
+
+`

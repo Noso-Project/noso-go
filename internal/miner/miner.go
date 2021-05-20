@@ -14,15 +14,15 @@ const (
 	hashChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func Miner(worker_num string, comms *Comms, ready chan bool) {
+func Miner(workerNum string, comms *Comms, ready chan bool) {
 	var (
-		jobStart     time.Time
-		jobDuration  time.Duration
-		buff         *bytes.Buffer
-		hashStr      string
-		target_len   int
-		target_large string
-		target_small string
+		jobStart    time.Time
+		jobDuration time.Duration
+		buff        *bytes.Buffer
+		hashStr     string
+		targets     []string
+		targetLen   int
+		targetMin   int
 
 		// From hash_22
 		seedLen   int
@@ -40,16 +40,21 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 	// Wait until ready
 	<-ready
 
-	// Search for TargetChars - 1 solutions
-	// Report any TargetChars solutions immediately
-	// Store any TargetChars - 1 solutions until the steps drop
 	for job := range comms.Jobs {
 		jobStart = time.Now()
-		target_large = job.TargetString[:job.TargetChars]
-		target_small = job.TargetString[:job.TargetChars-1]
+		targetMin = (job.Diff / 10) + 1 - job.PoolDepth
 		buff = bytes.NewBuffer(job.SeedFullBytes)
 		seedLen = buff.Len()
 		hashCount = 0
+
+		targets = make([]string, job.PoolDepth+1)
+
+		for i := 0; i < job.PoolDepth+1; i++ {
+			targets[i] = job.TargetString[:targetMin+i]
+		}
+
+		// 5 was chosen so that it would take roughly 1 second to iterate
+		// through all the hashes on one modern-ish cpu thread
 		for _, w = range hashChars[:5] {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
@@ -67,16 +72,23 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 						hex.Encode(encoded, tmp[:])
 						val = BytesToString(encoded)
 
-						// We could almost certainly increase hashrate if we
-						// could search the sha sum bytes rather than converting
-						// to a string first and then doing a string search
-						// Also, need to benchmark doing a small substring search
-						if !strings.Contains(val, target_small) {
+						// TODO: We could almost certainly increase hashrate if we
+						//       could search the sha sum bytes rather than converting
+						//       to a string first and then doing a string search
+						// TODO: Benchmark doing a small substring search
+						if !strings.Contains(val, targets[0]) {
+							// targets[0] is that absolute minimum that a pool will accept
+							// if we dont match that minimum, we can drop this solution
+							// and continue with the hashing
 							continue
-						} else if strings.Contains(val, target_large) {
-							target_len = job.TargetChars
-						} else {
-							target_len = job.TargetChars - 1
+						}
+
+						targetLen = targetMin
+						for _, t := range targets[1:] {
+							if !strings.Contains(val, t) {
+								break
+							}
+							targetLen++
 						}
 
 						hashStr = string(w) + string(x) + string(y) + string(z)
@@ -87,11 +99,11 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 							Seed:       job.SeedMiner,
 							HashStr:    job.SeedPostfix + hashStr,
 							Block:      job.Block,
-							Chars:      target_len,
+							Chars:      job.TargetChars,
 							Step:       job.Step,
 							SolvedHash: *(*string)(unsafe.Pointer(&solution)),
-							TargetLen:  target_len,
-							Target:     job.TargetString[:target_len],
+							TargetLen:  targetLen,
+							Target:     job.TargetString[:targetLen],
 							FullTarget: job.TargetString[:job.TargetChars],
 						}
 					}
@@ -99,7 +111,7 @@ func Miner(worker_num string, comms *Comms, ready chan bool) {
 			}
 		}
 		jobDuration = time.Since(jobStart)
-		comms.Reports <- Report{WorkerNum: worker_num, Hashes: hashCount, Duration: jobDuration}
+		comms.Reports <- Report{WorkerNum: workerNum, Hashes: hashCount, Duration: jobDuration}
 	}
 }
 

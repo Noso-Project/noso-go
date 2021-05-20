@@ -4,7 +4,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
+)
+
+// ! is 33
+// % is 37
+// ( is 40
+// _ is 95
+// _ and ( are reserved chars, skip them
+// Wallet doesn't like %, skip it
+const (
+	hashableSeedChars = "!\"#$&')*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|"
 )
 
 func NewJobComms() *JobComms {
@@ -16,6 +28,7 @@ func NewJobComms() *JobComms {
 		Diff:         make(chan int, 0),
 		TargetChars:  make(chan int, 0),
 		TargetString: make(chan string, 0),
+		PoolDepth:    make(chan int, 0),
 	}
 }
 
@@ -27,6 +40,7 @@ type JobComms struct {
 	Diff         chan int
 	TargetChars  chan int
 	TargetString chan string
+	PoolDepth    chan int
 }
 
 type Job struct {
@@ -40,6 +54,7 @@ type Job struct {
 	Diff          int
 	Block         int
 	Step          int
+	PoolDepth     int
 }
 
 func JobFeeder(comms *Comms, jobComms *JobComms) {
@@ -52,8 +67,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 		targetChars  int
 		targetString string
 		job          Job
-		running      bool
 		postfix      string
+		poolDepth    int
 	)
 
 	verSha := sha256.Sum256([]byte(MinerName))
@@ -76,6 +91,7 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 			case diff = <-jobComms.Diff:
 			case block = <-jobComms.Block:
 			case step = <-jobComms.Step:
+			case poolDepth = <-jobComms.PoolDepth:
 			}
 
 			if poolAddr == "" {
@@ -92,57 +108,46 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 				continue
 			} else if targetString == "" {
 				continue
+			} else if poolDepth == 0 {
+				continue
 			} else if minerSeed == "" {
 				continue
 			} else {
-				ready <- struct{}{}
-				break
+				close(ready)
+				return
 			}
 		}
 	}()
 
 	<-ready
 
-	// ! is 33
-	// % is 37
-	// ( is 40
-	// _ is 95
-	// _ and ( are reserved chars, skip them
-	// Wallet doesn't like %, skip it
+	// Randomize seed chars so that if a miner restarts in the middle of a block,
+	// it isn't rehashing already hashed values
+	seedChars := []rune(hashableSeedChars)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(seedChars), func(i, j int) { seedChars[i], seedChars[j] = seedChars[j], seedChars[i] })
 
 	for {
-		for x := 0; x < 92; x++ {
-			if x == 4 || x == 7 || x == 62 {
-				continue
-			}
-			for y := 0; y < 92; y++ {
-				if y == 4 || y == 7 || y == 62 {
-					continue
-				}
-				for z := 0; z < 92; z++ {
-					if z == 4 || z == 7 || z == 62 {
-						continue
-					}
+		for _, x := range seedChars {
+			for _, y := range seedChars {
+				for _, z := range seedChars {
+
 					seedBase := minerSeed[:len(minerSeed)-3]
-					seedX := string('!' + x)
-					seedY := string('!' + y)
-					seedZ := string('!' + z)
+					seedX := string(x)
+					seedY := string(y)
+					seedZ := string(z)
 					seed := seedBase + seedX + seedY + seedZ
 
-					// "_" and "(" are reserved characters in Noso
-					if strings.Contains(seed, "_") || strings.Contains(seed, "(") {
-						continue
-					}
-
+				loop:
 					for num := 1; num < 999; num++ {
 						postfix = ver + fmt.Sprintf("%03d", num)
-						running = true
 						fullSeed := seed + poolAddr + postfix
 						fullSeedBytes := []byte(fullSeed)
-						for running {
+						for {
 							job = Job{
 								TargetString:  strings.ToLower(targetString),
 								TargetChars:   targetChars,
+								PoolDepth:     poolDepth,
 								Diff:          diff,
 								Block:         block,
 								SeedMiner:     seed,
@@ -159,6 +164,8 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 								job.TargetChars = targetChars
 							case targetString = <-jobComms.TargetString:
 								job.TargetString = targetString
+							case poolDepth = <-jobComms.PoolDepth:
+								job.PoolDepth = poolDepth
 							case diff = <-jobComms.Diff:
 								job.Diff = diff
 							case block = <-jobComms.Block:
@@ -166,7 +173,7 @@ func JobFeeder(comms *Comms, jobComms *JobComms) {
 							case step = <-jobComms.Step:
 								job.Step = step
 							case comms.Jobs <- job:
-								running = false
+								continue loop
 							}
 						}
 					}

@@ -13,6 +13,7 @@ const (
 	PONG       = "PONG"
 	POOLSTEPS  = "POOLSTEPS"
 	STEPOK     = "STEPOK"
+	STEPFAIL   = "STEPFAIL"
 )
 
 func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
@@ -33,12 +34,17 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	case PAYMENTOK:
 		LogPaymentResp(r, poolIp)
 	case PONG:
-		// NoOp
+		comms.Pong <- struct{}{}
 	case POOLSTEPS:
 		poolData(comms, r, 0)
 	case STEPOK:
-		fmt.Println("Step solution accepted by pool")
-		comms.StepSolved <- 1
+		shares, err := strconv.Atoi(r[1])
+		if err != nil {
+			fmt.Printf("Had trouble parsing the shares from STEPOK message: %v\n", err)
+		}
+		comms.StepSolved <- shares
+	case STEPFAIL:
+		comms.StepFailed <- 1
 	default:
 		fmt.Printf("Uknown response code: %s\n", r[0])
 	}
@@ -82,5 +88,12 @@ func poolData(comms *Comms, resp []string, offset int) {
 		fmt.Printf("Error converting target chars: %s\n", resp[8+offset])
 	} else {
 		comms.BlocksTillPayment <- blocksTillPayment
+	}
+
+	poolDepth, err := strconv.Atoi(resp[10+offset])
+	if err != nil {
+		fmt.Printf("Error converting target chars: %s\n", resp[10+offset])
+	} else {
+		comms.PoolDepth <- poolDepth
 	}
 }

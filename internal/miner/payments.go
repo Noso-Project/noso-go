@@ -111,10 +111,12 @@ func parseAmount(amount string) string {
 		// Already formatted to X.YYY, do nothing
 	} else if l == 8 {
 		amount = "0." + amount
-	} else {
+	} else if l > 8 {
 		whole = amount[:l-8]
 		frac = amount[l-8:]
 		amount = fmt.Sprintf("%s.%s", whole, frac)
+	} else {
+		amount = fmt.Sprintf("0.%08s", l)
 	}
 	return amount
 }
