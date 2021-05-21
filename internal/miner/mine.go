@@ -55,8 +55,7 @@ func Mine(opts *Opts) {
 		currentStep       int
 		currentDiff       int
 		poolDepth         int
-		popSlice          []int
-		popCount          int
+		stepsSent         int
 		stepsAccepted     int
 		sharesEarned      int
 		sharesEarnedBlk   int
@@ -65,13 +64,13 @@ func Mine(opts *Opts) {
 		paymentRequested  time.Time
 
 		// hash rate info
-		totalHashes int
-		hashRate    int
+		totalHashes  int
+		hashRate     int
+		poolHashRate int
 	)
 	fmt.Printf(HEADER, Version, Commit)
 
 	workerReports = make(map[string]Report)
-	popSlice = make([]int, 0)
 
 	// Set a date in the past so we can request payment immediately if we
 	// have a vested balance
@@ -115,12 +114,14 @@ func Mine(opts *Opts) {
 			select {
 			case <-time.After(60 * time.Second):
 				fmt.Printf(
-					rewardMsg,
-					targetBlock,     // For Block %d
-					sharesEarnedBlk, // Shares Earned :
-					len(popSlice),   // PoP Sent :
-					sharesEarned,    // Shares Earned :
-					popCount,        // PoP Sent :
+					statusMsg,
+					targetBlock,
+					formatHashRate(strconv.Itoa(hashRate)),
+					formatHashRate(strconv.Itoa(poolHashRate)),
+					formatBalance(balance),
+					blocksTillPayment,
+					stepsSent,
+					stepsAccepted,
 				)
 			}
 		}
@@ -140,12 +141,6 @@ func Mine(opts *Opts) {
 		case targetChars = <-comms.TargetChars:
 			jobComms.TargetChars <- targetChars
 		case newBlock := <-comms.Block:
-			if newBlock != targetBlock {
-				stepsAccepted += sumSteps(popSlice)
-				popSlice = make([]int, 0)
-				sharesEarned += sharesEarnedBlk
-				sharesEarnedBlk = 0
-			}
 			targetBlock = newBlock
 			jobComms.Block <- targetBlock
 			solComms.Block <- targetBlock
@@ -168,18 +163,12 @@ func Mine(opts *Opts) {
 				paymentRequested = time.Now()
 			}
 		case <-solComms.StepSent:
-			popSlice = append(popSlice, 0)
-			popCount++
+			stepsSent++
 		case shares := <-comms.StepSolved:
-			if len(popSlice) > 0 {
-				popSlice[len(popSlice)-1]++
-			}
+			stepsAccepted++
 			sharesEarned += shares
 			sharesEarnedBlk += shares
 		case <-comms.StepFailed:
-			if len(popSlice) > 0 && popSlice[len(popSlice)-1] > 0 {
-				popSlice[len(popSlice)-1]--
-			}
 		case sol := <-comms.Solutions:
 			solComms.Solution <- sol
 		case report := <-comms.Reports:
@@ -199,31 +188,57 @@ func Mine(opts *Opts) {
 	}
 }
 
-func sumSteps(popSlice []int) (sum int) {
-	if len(popSlice) == 0 {
-		return 0
-	}
-	for _, v := range popSlice {
-		sum += v
-	}
-
-	return
+var hashNameMap = map[int]string{
+	0:  "Hashes",
+	1:  "Hashes",
+	2:  "Hashes",
+	3:  "Kilohashes",
+	4:  "Kilohashes",
+	5:  "Kilohashes",
+	6:  "Megahashes",
+	7:  "Megahashes",
+	8:  "Megahashes",
+	9:  "Gigahashes",
+	10: "Gigahashes",
+	11: "Gigahashes",
+	12: "Terahashes",
+	13: "Terahashes",
+	14: "Terahashes",
+	15: "Petahashes",
+	16: "Petahashes",
+	17: "Petahashes",
+	18: "Exahashes",
+	19: "Exahashes",
+	20: "Exahashes",
+	21: "Zettahashes",
+	22: "Zettahashes",
+	23: "Zettahashes",
 }
 
-const rewardMsg = `
+// func formatHashRate(hashRate int) string {
+// 	return strconv.Itoa(hashRate)
+// }
+
+func formatBalance(balance string) string {
+	return fmt.Sprintf("%s Noso", parseAmount(balance))
+}
+
+const statusMsg = `
 ************************************
 
-Current Rewards Status
+Miner Status
 
-For Block %d
----------------
-Shares Earned  : %d
-PoP Sent       : %d
+Current Block   : %d
+Miner Hash Rate : %s
+Pool Hash Rate  : %s
 
-Total
----------------
-Shares Earned  : %d
-PoP Sent       : %d
+Pool Balance        : %s
+Blocks Till Payment : %d
+
+Proof of Participation
+----------------------
+PoP Sent     : %d
+PoP Accepted : %d
 
 ************************************
 
