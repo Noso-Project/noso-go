@@ -2,7 +2,7 @@
 
 ## Quickstart
 
-Download the latest release for your OS and architecture from the [Releases Page](https://github.com/leviable/noso-go/releases)
+Download the latest release for your OS and architecture from the [Releases Page](https://github.com/Noso-Project/noso-go/releases)
 
 In most instances you will want the `64` version unless you have a fairly old computer
 
