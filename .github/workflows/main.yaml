@@ -6,9 +6,30 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+
 
 jobs:
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@master
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Install richgo
+        run: go get -u github.com/kyoh86/richgo
+
+      - name: Test richgo
+        run: richgo help test
+
+      - name: Unit Test
+        run: make unit-tests
+
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
+    needs: unit-test
     strategy:
       matrix:
         binary: [noso-go-darwin-amd64,
@@ -21,6 +42,10 @@ jobs:
     steps:
       - name: Checkout master
         uses: actions/checkout@master
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
 
       - name: Build ${{ matrix.binary }}
         run: make ${{ matrix.binary }}

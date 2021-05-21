@@ -1,3 +1,5 @@
+# github.com/deadcheat/goblet v1.3.1
+## explicit
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/hashicorp/hcl v1.0.0
@@ -13,13 +15,21 @@ github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/kyoh86/richgo v0.3.6
+## explicit
+# github.com/kyoh86/xdg v1.2.0
+## explicit
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
+# github.com/mattn/go-isatty v0.0.12
+## explicit
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
+# github.com/morikuni/aec v1.0.0
+## explicit
 # github.com/pelletier/go-toml v1.2.0
 github.com/pelletier/go-toml
 # github.com/spf13/afero v1.1.2
@@ -39,7 +49,11 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0
+# github.com/wacul/ptr v1.0.0
+## explicit
+# golang.org/x/sys v0.0.0-20210521203332-0cec03c779c1
+## explicit
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
