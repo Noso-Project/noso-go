@@ -8,9 +8,9 @@ func TestHashFormatting(t *testing.T) {
 		hashRate string
 		want     string
 	}{
-		{want: "  1     Hash/s", hashRate: "1"},
-		{want: " 12     Hash/s", hashRate: "12"},
-		{want: "123     Hash/s", hashRate: "123"},
+		{want: "  1.000 Hash/s", hashRate: "1"},
+		{want: " 12.000 Hash/s", hashRate: "12"},
+		{want: "123.000 Hash/s", hashRate: "123"},
 		{want: "  1.234 Khash/s", hashRate: "1234"},
 		{want: " 12.345 Khash/s", hashRate: "12345"},
 		{want: "123.456 Khash/s", hashRate: "123456"},
