@@ -90,6 +90,8 @@ func poolData(comms *Comms, resp []string, offset int) {
 		comms.BlocksTillPayment <- blocksTillPayment
 	}
 
+	comms.PoolHashRate <- resp[9+offset] + "000"
+
 	poolDepth, err := strconv.Atoi(resp[10+offset])
 	if err != nil {
 		fmt.Printf("Error converting target chars: %s\n", resp[10+offset])

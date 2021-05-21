@@ -66,7 +66,7 @@ func Mine(opts *Opts) {
 		// hash rate info
 		totalHashes  int
 		hashRate     int
-		poolHashRate int
+		poolHashRate string
 	)
 	fmt.Printf(HEADER, Version, Commit)
 
@@ -117,7 +117,7 @@ func Mine(opts *Opts) {
 					statusMsg,
 					targetBlock,
 					formatHashRate(strconv.Itoa(hashRate)),
-					formatHashRate(strconv.Itoa(poolHashRate)),
+					formatHashRate(poolHashRate),
 					formatBalance(balance),
 					blocksTillPayment,
 					stepsSent,
@@ -153,6 +153,7 @@ func Mine(opts *Opts) {
 		case poolDepth = <-comms.PoolDepth:
 			jobComms.PoolDepth <- poolDepth
 		case balance = <-comms.Balance:
+		case poolHashRate = <-comms.PoolHashRate:
 		case blocksTillPayment = <-comms.BlocksTillPayment:
 			// If we have a non-zero balance
 			// And our balance is fully vested
@@ -228,17 +229,18 @@ const statusMsg = `
 
 Miner Status
 
-Current Block   : %d
-Miner Hash Rate : %s
-Pool Hash Rate  : %s
+Current Block       : %d
+
+Miner Hash Rate     : %s
+Pool Hash Rate      : %s
 
 Pool Balance        : %s
 Blocks Till Payment : %d
 
 Proof of Participation
 ----------------------
-PoP Sent     : %d
-PoP Accepted : %d
+PoP Sent            : %d
+PoP Accepted        : %d
 
 ************************************
 
