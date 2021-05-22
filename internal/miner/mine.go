@@ -24,6 +24,7 @@ package miner
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -67,6 +68,9 @@ func Mine(opts *Opts) {
 		totalHashes  int
 		hashRate     int
 		poolHashRate string
+
+		// syncing
+		m sync.RWMutex
 	)
 	fmt.Printf(HEADER, Version, Commit)
 
@@ -99,8 +103,15 @@ func Mine(opts *Opts) {
 
 	// TODO: Need to do a sync broadcast for ready
 	go func() {
-		for targetChars == 0 || targetBlock == 0 || targetString == "" {
-			time.Sleep(100 * time.Millisecond)
+
+		for running := true; running; {
+			m.RLock()
+			if targetChars == 0 || targetBlock == 0 || targetString == "" {
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				running = false
+			}
+			m.RUnlock()
 		}
 		close(ready)
 	}()
@@ -113,12 +124,16 @@ func Mine(opts *Opts) {
 		for {
 			select {
 			case <-time.After(60 * time.Second):
+				m.RLock()
+				hr := hashRate
+				bal := balance
+				m.RUnlock()
 				fmt.Printf(
 					statusMsg,
 					targetBlock,
-					formatHashRate(strconv.Itoa(hashRate)),
+					formatHashRate(strconv.Itoa(hr)),
 					formatHashRate(poolHashRate),
-					formatBalance(balance),
+					formatBalance(bal),
 					blocksTillPayment,
 					stepsSent,
 					stepsAccepted,
@@ -136,14 +151,22 @@ func Mine(opts *Opts) {
 			jobComms.PoolAddr <- poolAddr
 		case minerSeed = <-comms.MinerSeed:
 			jobComms.MinerSeed <- minerSeed
-		case targetString = <-comms.TargetString:
-			jobComms.TargetString <- targetString
-		case targetChars = <-comms.TargetChars:
-			jobComms.TargetChars <- targetChars
+		case ts := <-comms.TargetString:
+			m.Lock()
+			targetString = ts
+			m.Unlock()
+			jobComms.TargetString <- ts
+		case tc := <-comms.TargetChars:
+			m.Lock()
+			targetChars = tc
+			m.Unlock()
+			jobComms.TargetChars <- tc
 		case newBlock := <-comms.Block:
+			m.Lock()
 			targetBlock = newBlock
-			jobComms.Block <- targetBlock
-			solComms.Block <- targetBlock
+			m.Unlock()
+			jobComms.Block <- newBlock
+			solComms.Block <- newBlock
 		case currentStep = <-comms.Step:
 			jobComms.Step <- currentStep
 			solComms.Step <- currentStep
@@ -152,7 +175,10 @@ func Mine(opts *Opts) {
 			solComms.Diff <- currentDiff
 		case poolDepth = <-comms.PoolDepth:
 			jobComms.PoolDepth <- poolDepth
-		case balance = <-comms.Balance:
+		case bal := <-comms.Balance:
+			m.Lock()
+			balance = bal
+			m.Unlock()
 		case poolHashRate = <-comms.PoolHashRate:
 		case blocksTillPayment = <-comms.BlocksTillPayment:
 			// If we have a non-zero balance
@@ -176,13 +202,16 @@ func Mine(opts *Opts) {
 			// TODO: do rolling average instead of all time
 			workerReports[report.WorkerNum] = report
 
-			hashRate = 0
+			hr := 0
 			for _, rep := range workerReports {
 				dur := float64(rep.Duration) / float64(time.Second)
-				hashRate += int(float64(rep.Hashes) / dur)
+				hr += int(float64(rep.Hashes) / dur)
 			}
 			totalHashes += report.Hashes
-			comms.HashRate <- hashRate
+			m.Lock()
+			hashRate = hr
+			m.Unlock()
+			comms.HashRate <- hr
 		case resp = <-client.RecvChan:
 			go Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
 		}
