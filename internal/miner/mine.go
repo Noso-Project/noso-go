@@ -33,7 +33,7 @@ const (
 # ##########################################################
 #
 # noso-go %s by levi.noecker@gmail.com (c)2021
-# https://github.com/leviable/noso-go
+# https://github.com/Noso-Project/noso-go
 # Commit: %s
 #
 # ##########################################################

@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/leviable/noso-go/internal/miner"
+	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"

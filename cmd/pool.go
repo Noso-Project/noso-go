@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/leviable/noso-go/internal/miner"
+	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
 
