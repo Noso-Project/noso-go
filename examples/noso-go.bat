@@ -7,12 +7,12 @@ Rem #################################
 
 
 REM Valid Pools:
+REM   DevNoso
 REM   dukedog.io
 REM   mining.moe
 REM   russiapool
-REM   yzpool
 
-set "POOL=yzpool"
+set "POOL=DevNoso"
 set "CPU=2"
 set "WALLET=N2RUEEpVEyF9fgmQg6HKcrwkm4MERDx"
 
