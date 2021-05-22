@@ -1,5 +1,13 @@
 # Noso Coin Miner
 
+[![Build Status](https://github.com/Noso-Project/noso-go/workflows/noso-go/badge.svg?branch=master)](https://github.com/Noso-Project/noso-go/actions)
+[![Supports Windows](https://img.shields.io/badge/support-Windows-blue?logo=Windows)](https://github.com/Noso-Project/noso-go/releases/latest)
+[![Supprts Linux](https://img.shields.io/badge/support-Linux-yellow?logo=Linux)](https://github.com/Noso-Project/noso-go/releases/latest)
+[![Supports macOS](https://img.shields.io/badge/support-macOS-black?logo=macOS)](https://github.com/Noso-Project/noso-go/releases/latest)
+[![License](https://img.shields.io/github/license/Noso-Project/noso-go)](https://github.com/Noso-Project/noso-go/blob/master/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/Noso-Project/noso-go?label=latest%20release)](https://github.com/Noso-Project/noso-go/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Noso-Project/noso-go/total)](https://github.com/Noso-Project/noso-go/releases)
+
 ## Quickstart
 
 Download the latest release for your OS and architecture from the [Releases Page](https://github.com/Noso-Project/noso-go/releases)
@@ -13,11 +21,11 @@ In most instances you will want the `64` version unless you have a fairly old co
 3. Update the CPU line with the number of PHYSICAL cores you want to use
 4. Update the WALLET line with your wallet address
 5. Save and close
-6. Double click the noso-go.bat file 
+6. Double click the noso-go.bat file
 
 NOTE: To find out how many physical cores you have, you can run the following command in the command prompt (works on Windows 2000/NT or later):
 ```
-wmic computersystem get numberoflogicalprocessors 
+wmic computersystem get numberoflogicalprocessors
 ```
 
 ### Quickstart - Linux/Mac/ARM
@@ -34,7 +42,7 @@ x noso-go
 ./noso-go mine \
     --address <IP Address or URL of the Noso pool> \
     --port <Port of the Noso pool>
-	--password <Password for the Noso pool> \
+    --password <Password for the Noso pool> \
     --wallet <Your wallet address> \
     --cpu <Number of CPU cores to use when mining>
 ```
@@ -45,9 +53,9 @@ e.g.
 ./noso-go mine \
     --address noso.dukedog.io \
     --port 8082 \
-	--password duke \
+    --password duke \
     --wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
-    --cpu 4          
+    --cpu 4
 ```
 
 NOTE: If you get a permissions error, run this command in your terminal window, then try again:
@@ -119,18 +127,18 @@ When downloading the release, you will probably get a warning from your browser,
 2. Build the binary yourself, and your OS wont complain about it. See the [Building](#Building) section below for more info
 3. Instruct your browser/OS/AV that you accept the risks
    - Chrome:
-     - Click the ^ next to `Discard` and select `Keep`  
+     - Click the ^ next to `Discard` and select `Keep`
        ![](images/chrome-keep.png)
    - Windows MSE
-     - (Not recommended) Turn off real-time protection:  
+     - (Not recommended) Turn off real-time protection:
        ![](images/mse-real-time.png)
-     - (Recommended) Create an exclusion zone for noso-go releases, and download them to that location:  
+     - (Recommended) Create an exclusion zone for noso-go releases, and download them to that location:
        ![](images/mse-excluded-locations.png)
    - MacOS
-     - The first time your run the binary you will get a popup like so. Click `Cancel`:  
+     - The first time your run the binary you will get a popup like so. Click `Cancel`:
        ![](images/mac-1-popup.png)
      - Open your `System Preferences` app and click on the `Security & Privacy` icon
-     - There should be a warning on the bottom about the `noso-go` application being blocked. Click the `Allow Anyway` button:  
+     - There should be a warning on the bottom about the `noso-go` application being blocked. Click the `Allow Anyway` button:
        ![](images/mac-2-allow-anyways.png)
    - Linux
      - So far I have seen no reports of any flavor of Linux complaining about the binaries. If you come across a problem, please open an [Issue](https://github.com/Noso-Project/noso-go/issues) in this repo and I will add it to the README
