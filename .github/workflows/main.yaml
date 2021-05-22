@@ -1,3 +1,5 @@
+name: noso-go
+
 on:
   push:
     branches:
