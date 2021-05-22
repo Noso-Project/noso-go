@@ -134,14 +134,20 @@ recv:
 }
 
 func (t *TcpClient) ping(manComms *managerComms) {
-	var hashRate int
+	var (
+		hashRate int
+		m        sync.RWMutex
+	)
 
 	go func() {
 		for {
 			select {
 			case <-manComms.disconnected:
 				return
-			case hashRate = <-t.comms.HashRate:
+			case hr := <-t.comms.HashRate:
+				m.Lock()
+				hashRate = hr
+				m.Unlock()
 			}
 		}
 	}()
@@ -159,7 +165,11 @@ ping:
 		case <-manComms.disconnected:
 			break ping
 		case <-time.After(5 * time.Second):
-			t.SendChan <- fmt.Sprintf("PING %d", hashRate/1000)
+
+			m.RLock()
+			hr := hashRate
+			m.RUnlock()
+			t.SendChan <- fmt.Sprintf("PING %d", hr/1000)
 		}
 	}
 }

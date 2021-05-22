@@ -5,6 +5,9 @@ APP := noso-go
 REVISION := $(shell git rev-parse --short=8 HEAD)
 TAG := $(shell git describe --tags --exact-match $(REVISION) 2>/dev/null)
 
+GO111MODULE ?= auto
+GOFLAGS ?= -mod=vendor
+
 ifneq ($(TAG),)
 VER := $(TAG)
 LDVER := -X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'
@@ -70,6 +73,15 @@ package-%:
 			fi \
 			;; \
 	esac
+
+
+.PHONY: unit-test
+unit-tests:
+ifeq (, $(shell which richgo))
+	go test -v ./.../miner
+else
+	richgo test -v ./.../miner
+endif
 
 .PHONY: clean
 clean:

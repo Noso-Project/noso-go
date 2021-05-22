@@ -116,7 +116,7 @@ func parseAmount(amount string) string {
 		frac = amount[l-8:]
 		amount = fmt.Sprintf("%s.%s", whole, frac)
 	} else {
-		amount = fmt.Sprintf("0.%08s", l)
+		amount = fmt.Sprintf("0.%08d", l)
 	}
 	return amount
 }
