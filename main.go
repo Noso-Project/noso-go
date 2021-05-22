@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/leviable/noso-go/cmd"
+import "github.com/Noso-Project/noso-go/cmd"
 
 func main() {
 	cmd.Execute()

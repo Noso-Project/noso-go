@@ -10,12 +10,12 @@ GOFLAGS ?= -mod=vendor
 
 ifneq ($(TAG),)
 VER := $(TAG)
-LDVER := -X 'github.com/leviable/noso-go/internal/miner.Version=$(VER)'
+LDVER := -X 'github.com/Noso-Project/noso-go/internal/miner.Version=$(VER)'
 else
 LDVER :=
 endif
 
-LDREV := -X 'github.com/leviable/noso-go/internal/miner.Commit=$(REVISION)'
+LDREV := -X 'github.com/Noso-Project/noso-go/internal/miner.Commit=$(REVISION)'
 
 LDFLAGS := -ldflags "-s -w $(LDVER) $(LDREV)"
 

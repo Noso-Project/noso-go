@@ -1,4 +1,4 @@
-module github.com/leviable/noso-go
+module github.com/Noso-Project/noso-go
 
 go 1.16
 

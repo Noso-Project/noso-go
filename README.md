@@ -133,7 +133,7 @@ When downloading the release, you will probably get a warning from your browser,
      - There should be a warning on the bottom about the `noso-go` application being blocked. Click the `Allow Anyway` button:  
        ![](images/mac-2-allow-anyways.png)
    - Linux
-     - So far I have seen no reports of any flavor of Linux complaining about the binaries. If you come across a problem, please open an [Issue](https://github.com/leviable/noso-go/issues) in this repo and I will add it to the README
+     - So far I have seen no reports of any flavor of Linux complaining about the binaries. If you come across a problem, please open an [Issue](https://github.com/Noso-Project/noso-go/issues) in this repo and I will add it to the README
 
 ## Building
 
