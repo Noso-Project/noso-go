@@ -53,8 +53,9 @@ List info about a specific pool
 ./noso-go mine pool yzpool --info
 
 Start mining with a pool
-./noso-go mine pool yzpool --wallet <your wallet address>
+./noso-go mine pool devnoso    --wallet <your wallet address>
 ./noso-go mine pool dukedog.io --wallet <your wallet address>
+./noso-go mine pool mining.moe --wallet <your wallet address>
 ./noso-go mine pool russiapool --wallet <your wallet address>
 `,
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -143,11 +144,6 @@ func loadPools() {
 	// TODO: Use github.com/markbates/pkger to package a Yaml
 	//       file instead of hard coding these here
 	pools = make(map[string]*miner.Opts)
-	pools["yzpool"] = &miner.Opts{
-		IpAddr: "81.68.115.175",
-		IpPort: 8082,
-		PoolPw: "YZpool",
-	}
 	pools["dukedog.io"] = &miner.Opts{
 		IpAddr: "noso.dukedog.io",
 		IpPort: 8082,

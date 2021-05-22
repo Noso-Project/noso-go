@@ -65,11 +65,12 @@ package-%:
 		windows) \
 			cp bin/$(APP)-$(OS)-$(ARCH) bin/$(APP).exe;\
 			cp examples/$(APP).bat bin/$(APP).bat;\
+			cp examples/$(APP)-menu.bat bin/$(APP)-menu.bat;\
 			chmod +x bin/$(APP).exe;\
 			if [ "$(ARCH)" = "386" ]; then \
-				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe $(APP).bat README.md); \
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win32.zip $(APP).exe $(APP).bat ${APP}-menu.bat README.md); \
 			else \
-				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe $(APP).bat README.md); \
+				(cd bin && zip ../packages/$(APP)-$(TAG)-win64.zip $(APP).exe $(APP).bat ${APP}-menu.bat README.md); \
 			fi \
 			;; \
 	esac
