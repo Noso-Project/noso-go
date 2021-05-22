@@ -5,6 +5,9 @@ Rem ## Begin of user-editable part ##
 Rem #################################
 
 
+REM Menu code initially provided by Grumpy
+REM on the Discord server
+
 REM Valid Pools:
 REM   DevNoso
 REM   dukedog.io
