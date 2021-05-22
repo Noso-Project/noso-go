@@ -1,6 +1,6 @@
 # Noso Coin Miner
 
-[![Build Status](https://github.com/Noso-Project/noso-go/workflows/noso-go/badge.svg?branch=master)](https://github.com/Noso-Project/noso-go/actions)
+[![Build and Tests Status](https://github.com/Noso-Project/noso-go/workflows/noso-go/badge.svg?branch=main)](https://github.com/Noso-Project/noso-go/actions)
 [![Supports Windows](https://img.shields.io/badge/support-Windows-blue?logo=Windows)](https://github.com/Noso-Project/noso-go/releases/latest)
 [![Supprts Linux](https://img.shields.io/badge/support-Linux-yellow?logo=Linux)](https://github.com/Noso-Project/noso-go/releases/latest)
 [![Supports macOS](https://img.shields.io/badge/support-macOS-black?logo=macOS)](https://github.com/Noso-Project/noso-go/releases/latest)
