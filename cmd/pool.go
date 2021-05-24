@@ -63,7 +63,7 @@ Start mining with a pool
 			return nil
 		}
 		if len(args) < 1 {
-			return errors.New("requires a pool name (i.e. 'noso-go mine pool yzpool')")
+			return errors.New("requires a pool name (e.g. 'noso-go mine pool yzpool')")
 		}
 		poolName := strings.ToLower(args[0])
 		if _, ok := pools[poolName]; !ok {
