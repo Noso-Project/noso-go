@@ -23,6 +23,7 @@ func NewComms() *Comms {
 		Solutions:         make(chan Solution, 0),
 		Joined:            make(chan struct{}, 0),
 		Pong:              make(chan struct{}, 0),
+		PoolStatus:        make(chan PoolStatus, 0),
 	}
 }
 
@@ -46,6 +47,7 @@ type Comms struct {
 	Solutions         chan Solution
 	Joined            chan struct{}
 	Pong              chan struct{}
+	PoolStatus        chan PoolStatus
 }
 
 type Report struct {

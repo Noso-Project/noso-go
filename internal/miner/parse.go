@@ -12,6 +12,7 @@ const (
 	PAYMENTOK  = "PAYMENTOK"
 	PONG       = "PONG"
 	POOLSTEPS  = "POOLSTEPS"
+	STATUS     = "STATUS"
 	STEPOK     = "STEPOK"
 	STEPFAIL   = "STEPFAIL"
 )
@@ -45,6 +46,8 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 		comms.StepSolved <- shares
 	case STEPFAIL:
 		comms.StepFailed <- 1
+	case STATUS:
+		comms.PoolStatus <- NewPoolStatus(r[1:])
 	default:
 		fmt.Printf("Uknown response code: %s\n", r[0])
 	}

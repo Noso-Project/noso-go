@@ -85,7 +85,7 @@ func Mine(opts *Opts) {
 	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
 	fmt.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
 	comms := NewComms()
-	client := NewTcpClient(opts, comms)
+	client := NewTcpClient(opts, comms, true, true)
 
 	// Start the job feeder goroutine
 	jobComms := NewJobComms()
