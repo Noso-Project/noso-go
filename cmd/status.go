@@ -17,10 +17,10 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
 
@@ -81,8 +81,7 @@ Get status of a pool
 		poolOpts.IpPort = pool.IpPort
 		poolOpts.PoolPw = pool.PoolPw
 
-		// miner.Mine(poolOpts)
-		fmt.Println(poolOpts)
+		miner.GetPoolStatus(poolOpts)
 	},
 }
 

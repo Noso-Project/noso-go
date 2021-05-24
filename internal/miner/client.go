@@ -14,7 +14,7 @@ const (
 	reconnectSleep    = 5 * time.Second
 )
 
-func NewTcpClient(opts *Opts, comms *Comms) *TcpClient {
+func NewTcpClient(opts *Opts, comms *Comms, join bool) *TcpClient {
 	client := &TcpClient{
 		minerVer:  MinerName,
 		comms:     comms,
@@ -24,6 +24,7 @@ func NewTcpClient(opts *Opts, comms *Comms) *TcpClient {
 		RecvChan:  make(chan string, 100),
 		connected: make(chan interface{}, 0),
 		mutex:     &sync.Mutex{},
+		join:      join,
 	}
 
 	go client.manager()
@@ -41,6 +42,7 @@ type TcpClient struct {
 	conn      net.Conn
 	connected chan interface{}
 	mutex     *sync.Mutex
+	join      bool
 }
 
 type managerComms struct {
@@ -93,7 +95,9 @@ func (t *TcpClient) manager() {
 }
 
 func (t *TcpClient) send(conn net.Conn, manComms *managerComms) {
-	go func() { t.SendChan <- fmt.Sprintf("JOIN %s", t.minerVer) }()
+	if t.join {
+		go func() { t.SendChan <- fmt.Sprintf("JOIN %s", t.minerVer) }()
+	}
 
 send:
 	for {
