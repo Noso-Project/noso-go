@@ -14,7 +14,7 @@ const (
 	reconnectSleep    = 5 * time.Second
 )
 
-func NewTcpClient(opts *Opts, comms *Comms, join bool) *TcpClient {
+func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 	client := &TcpClient{
 		minerVer:  MinerName,
 		comms:     comms,
@@ -24,6 +24,7 @@ func NewTcpClient(opts *Opts, comms *Comms, join bool) *TcpClient {
 		RecvChan:  make(chan string, 100),
 		connected: make(chan interface{}, 0),
 		mutex:     &sync.Mutex{},
+		showLogs:  showLogs,
 		join:      join,
 	}
 
@@ -42,6 +43,7 @@ type TcpClient struct {
 	conn      net.Conn
 	connected chan interface{}
 	mutex     *sync.Mutex
+	showLogs  bool
 	join      bool
 }
 
@@ -88,9 +90,11 @@ func (t *TcpClient) manager() {
 			conn.Close()
 		}
 
-		// Wait 5 seconds between connection attempts
-		fmt.Printf("Disconnected from pool, will retry connection in %d seconds\n", reconnectSleep/time.Second)
-		time.Sleep(reconnectSleep)
+		if t.join {
+			// Wait 5 seconds between connection attempts
+			fmt.Printf("Disconnected from pool, will retry connection in %d seconds\n", reconnectSleep/time.Second)
+			time.Sleep(reconnectSleep)
+		}
 	}
 }
 
@@ -103,7 +107,9 @@ send:
 	for {
 		select {
 		case msg := <-t.SendChan:
-			fmt.Printf("-> %s\n", msg)
+			if t.showLogs {
+				fmt.Printf("-> %s\n", msg)
+			}
 			msg = fmt.Sprintf("%s %s\n", t.auth, msg)
 			fmt.Fprintf(conn, msg)
 		case <-manComms.disconnected:
@@ -121,7 +127,9 @@ recv:
 			break recv
 		default:
 			if ok := scanner.Scan(); !ok {
-				fmt.Println("Error in connection: ", scanner.Err())
+				if t.showLogs {
+					fmt.Println("Error in connection: ", scanner.Err())
+				}
 				t.close(manComms.disconnected)
 				break
 			}
@@ -129,7 +137,9 @@ recv:
 			if resp == "" {
 				continue
 			}
-			fmt.Print("<- " + resp + "\n")
+			if t.showLogs {
+				fmt.Print("<- " + resp + "\n")
+			}
 			t.RecvChan <- resp
 			// Since we got something, reset the deadline
 			conn.SetReadDeadline(time.Now().Add(connectionTimeout))

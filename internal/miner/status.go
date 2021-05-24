@@ -37,7 +37,7 @@ func GetPoolStatus(opts *Opts) {
 	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
 	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
 	comms := NewComms()
-	client := NewTcpClient(opts, comms, false)
+	client := NewTcpClient(opts, comms, false, false)
 
 	client.SendChan <- "STATUS"
 
@@ -47,7 +47,7 @@ loop:
 		case resp = <-client.RecvChan:
 			go Parse(comms, opts.IpAddr, opts.Wallet, 0, resp)
 		case status := <-comms.PoolStatus:
-			fmt.Printf("Got status from pool: %+v\n", status)
+			status.PrettyPrint()
 			break loop
 		case <-time.After(5 * time.Second):
 			fmt.Println("Failed to get a response back from the pool")
@@ -65,6 +65,17 @@ type PoolStatus struct {
 	Share       string
 	MinerCnt    string
 	Miners      []MinerInfo
+}
+
+func (p *PoolStatus) PrettyPrint() {
+	status := `
+Hash Rate: %s
+Fee      : %s
+Share    : %s
+Miners   : %s
+
+`
+	fmt.Printf(status, strings.TrimSpace(p.HashRate), p.Fee, p.Share, p.MinerCnt)
 }
 
 // s[] -> STATUS {hashrate} {fee} {share} {minerCount} [list of miners: {address}:{balance}:{blocks_until_paymet}]
