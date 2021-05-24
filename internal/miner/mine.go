@@ -63,6 +63,7 @@ func Mine(opts *Opts) {
 		blocksTillPayment int
 		balance           string
 		paymentRequested  time.Time
+		btpNote           string
 
 		// hash rate info
 		totalHashes  int
@@ -135,6 +136,7 @@ func Mine(opts *Opts) {
 					formatHashRate(poolHashRate),
 					formatBalance(bal),
 					blocksTillPayment,
+					btpNote,
 					stepsSent,
 					stepsAccepted,
 				)
@@ -188,6 +190,11 @@ func Mine(opts *Opts) {
 				client.SendChan <- "PAYMENT"
 				LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
 				paymentRequested = time.Now()
+			} else if blocksTillPayment > 0 {
+				btpNote = fmt.Sprint(`(* Note: A positive number here means you will
+                            receive a payment as soon as the pool finds a block)`)
+			} else {
+				btpNote = ""
 			}
 		case <-solComms.StepSent:
 			stepsSent++
@@ -218,41 +225,6 @@ func Mine(opts *Opts) {
 	}
 }
 
-var hashNameMap = map[int]string{
-	0:  "Hashes",
-	1:  "Hashes",
-	2:  "Hashes",
-	3:  "Kilohashes",
-	4:  "Kilohashes",
-	5:  "Kilohashes",
-	6:  "Megahashes",
-	7:  "Megahashes",
-	8:  "Megahashes",
-	9:  "Gigahashes",
-	10: "Gigahashes",
-	11: "Gigahashes",
-	12: "Terahashes",
-	13: "Terahashes",
-	14: "Terahashes",
-	15: "Petahashes",
-	16: "Petahashes",
-	17: "Petahashes",
-	18: "Exahashes",
-	19: "Exahashes",
-	20: "Exahashes",
-	21: "Zettahashes",
-	22: "Zettahashes",
-	23: "Zettahashes",
-}
-
-// func formatHashRate(hashRate int) string {
-// 	return strconv.Itoa(hashRate)
-// }
-
-func formatBalance(balance string) string {
-	return fmt.Sprintf("%s Noso", parseAmount(balance))
-}
-
 const statusMsg = `
 ************************************
 
@@ -264,7 +236,7 @@ Miner Hash Rate     : %s
 Pool Hash Rate      : %s
 
 Pool Balance        : %s
-Blocks Till Payment : %d
+Blocks Till Payment : %d %s
 
 Proof of Participation
 ----------------------

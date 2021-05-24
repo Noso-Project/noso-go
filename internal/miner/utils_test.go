@@ -41,3 +41,30 @@ func TestHashFormatting(t *testing.T) {
 		}
 	}
 }
+
+func TestBalanceFormatting(t *testing.T) {
+
+	examples := []struct {
+		balance string
+		want    string
+	}{
+		{want: "0.00000000 Noso", balance: "0"},
+		{want: "0.00000001 Noso", balance: "1"},
+		{want: "0.00000021 Noso", balance: "21"},
+		{want: "0.00000321 Noso", balance: "321"},
+		{want: "0.00004321 Noso", balance: "4321"},
+		{want: "0.00054321 Noso", balance: "54321"},
+		{want: "0.00654321 Noso", balance: "654321"},
+		{want: "0.07654321 Noso", balance: "7654321"},
+		{want: "0.87654321 Noso", balance: "87654321"},
+		{want: "9.87654321 Noso", balance: "987654321"},
+		{want: "19.87654321 Noso", balance: "1987654321"},
+	}
+
+	for _, tt := range examples {
+		got := formatBalance(tt.balance)
+		if got != tt.want {
+			t.Errorf("got %s want %s", got, tt.want)
+		}
+	}
+}

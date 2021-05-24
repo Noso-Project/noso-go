@@ -3,6 +3,7 @@ package miner
 import (
 	"fmt"
 	"math"
+	"strings"
 )
 
 var orderOfMag = []string{"H", "Kh", "Mh", "Gh", "Th", "Ph", "Eh", "Zh"}
@@ -32,4 +33,22 @@ func formatHashRate(hr string) string {
 	}
 
 	return fmt.Sprintf("%3s.%s %sash/s", whole, frac, mag)
+}
+
+func formatBalance(balance string) string {
+	return fmt.Sprintf("%s Noso", parseAmount(balance))
+}
+
+func parseAmount(amount string) string {
+	if strings.Contains(amount, ".") {
+		// Already formatted to X.YYY, do nothing
+		return amount
+	}
+
+	for len(amount) < 9 {
+		amount = "0" + amount
+	}
+
+	l := len(amount)
+	return fmt.Sprintf("%s.%s", amount[:l-8], amount[l-8:])
 }

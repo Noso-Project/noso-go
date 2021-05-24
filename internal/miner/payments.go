@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -97,26 +96,4 @@ func write(writeStr string) {
 	if _, err := f.WriteString(writeStr); err != nil {
 		fmt.Printf("Trouble writing to payments.csv: %s\n", err)
 	}
-}
-
-func parseAmount(amount string) string {
-	var (
-		whole string
-		frac  string
-	)
-	l := len(amount)
-	if amount == "0" {
-		amount = "0.00000000"
-	} else if strings.Contains(amount, ".") {
-		// Already formatted to X.YYY, do nothing
-	} else if l == 8 {
-		amount = "0." + amount
-	} else if l > 8 {
-		whole = amount[:l-8]
-		frac = amount[l-8:]
-		amount = fmt.Sprintf("%s.%s", whole, frac)
-	} else {
-		amount = fmt.Sprintf("0.%08d", l)
-	}
-	return amount
 }
