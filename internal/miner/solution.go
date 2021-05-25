@@ -1,6 +1,9 @@
 package miner
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 func NewSolutionComms(sendChan chan string) *SolutionComms {
 	return &SolutionComms{
@@ -44,17 +47,17 @@ func SolutionManager(solComms *SolutionComms, showPop bool) {
 	for {
 		select {
 		case newBlock := <-solComms.Block:
-			// fmt.Println("Block is: ", block)
+			// log.Println("Block is: ", block)
 			if newBlock != block {
 				block = newBlock
 			}
 		case _ = <-solComms.Step:
 		case diff = <-solComms.Diff:
 		case sol = <-solComms.Solution:
-			// fmt.Printf("Solution is: %+v\n", sol)
+			// log.Printf("Solution is: %+v\n", sol)
 			if sol.Block != block {
 				// Drop stale solutions
-				fmt.Printf("Dropping Solution (old block): %+v\n", sol)
+				log.Printf("Dropping Solution (old block): %+v\n", sol)
 				continue
 			} else if sol.TargetLen <= sol.Chars-2 {
 				// PoP solution
@@ -85,7 +88,7 @@ func printFoundSolution(sol Solution, isStep bool) {
 	if isStep {
 		stepOrPop = "Step"
 	}
-	fmt.Printf(
+	log.Printf(
 		found_one,
 		stepOrPop,
 		sol.Block,

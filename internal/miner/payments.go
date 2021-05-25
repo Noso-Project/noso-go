@@ -2,6 +2,7 @@ package miner
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -37,7 +38,7 @@ func LogPaymentResp(paymentMsg []string, poolIp string) {
 	)
 
 	if len(paymentMsg) < 3 {
-		fmt.Println("Error: noso-go requires that the pool use Noso Wallet 0.2.0 N or greater")
+		log.Println("Error: noso-go requires that the pool use Noso Wallet 0.2.0 N or greater")
 		return
 	}
 
@@ -49,7 +50,7 @@ func LogPaymentResp(paymentMsg []string, poolIp string) {
 	wallet = paymentMsg[3]
 	block, err := strconv.Atoi(paymentMsg[5])
 	if err != nil {
-		fmt.Println("Error converting block string in PAYMENTOK response: ", err)
+		log.Println("Error converting block string in PAYMENTOK response: ", err)
 	}
 	amount = paymentMsg[6]
 	orderId = paymentMsg[7]
@@ -67,7 +68,7 @@ func write(writeStr string) {
 	f, err := os.OpenFile("payments.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	if err != nil {
-		fmt.Printf("Trouble opening payments.csv: %s\n", err)
+		log.Printf("Trouble opening payments.csv: %s\n", err)
 		return
 	}
 
@@ -78,12 +79,12 @@ func write(writeStr string) {
 	s, err := f.Stat()
 
 	if err != nil {
-		fmt.Printf("Trouble getting file stats for payments.csv: %s\n", err)
+		log.Printf("Trouble getting file stats for payments.csv: %s\n", err)
 	} else {
 		size := s.Size()
 		if size == 0 {
 			if _, err := f.WriteString(CSVHEADER); err != nil {
-				fmt.Printf("Trouble header to payments.csv: %s\n", err)
+				log.Printf("Trouble header to payments.csv: %s\n", err)
 			}
 		}
 	}
@@ -94,6 +95,6 @@ func write(writeStr string) {
 	}
 
 	if _, err := f.WriteString(writeStr); err != nil {
-		fmt.Printf("Trouble writing to payments.csv: %s\n", err)
+		log.Printf("Trouble writing to payments.csv: %s\n", err)
 	}
 }

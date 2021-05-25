@@ -23,6 +23,7 @@ package miner
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -34,8 +35,8 @@ func GetPoolStatus(opts *Opts) {
 		resp string
 	)
 
-	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
-	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
+	log.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
+	log.Printf("Using wallet address: %s\n", opts.Wallet)
 	comms := NewComms()
 	client := NewTcpClient(opts, comms, false, false)
 
@@ -50,7 +51,7 @@ loop:
 			status.PrettyPrint()
 			break loop
 		case <-time.After(5 * time.Second):
-			fmt.Println("Failed to get a response back from the pool")
+			log.Println("Failed to get a response back from the pool")
 			os.Exit(1)
 		}
 	}
@@ -75,7 +76,7 @@ Share    : %s
 Miners   : %s
 
 `
-	fmt.Printf(status, strings.TrimSpace(p.HashRate), p.Fee, p.Share, p.MinerCnt)
+	log.Printf(status, strings.TrimSpace(p.HashRate), p.Fee, p.Share, p.MinerCnt)
 }
 
 // s[] -> STATUS {hashrate} {fee} {share} {minerCount} [list of miners: {address}:{balance}:{blocks_until_paymet}]
@@ -89,13 +90,13 @@ func NewPoolStatus(s []string) PoolStatus {
 	hr := formatHashRate(hrRaw + "000")
 	feeRaw, err := strconv.Atoi(s[1])
 	if err != nil {
-		fmt.Println("Error converting Fee to int")
+		log.Println("Error converting Fee to int")
 	} else {
 		fee = fmt.Sprintf("%.2f%%", float64(feeRaw)/100)
 	}
 	shareRaw, err := strconv.Atoi(s[2])
 	if err != nil {
-		fmt.Println("Error converting Share to int")
+		log.Println("Error converting Share to int")
 	} else {
 		share = fmt.Sprintf("%.2f%%", float64(shareRaw)/100)
 	}
