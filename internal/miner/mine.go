@@ -23,6 +23,10 @@ package miner
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -73,7 +77,21 @@ func Mine(opts *Opts) {
 		// syncing
 		m sync.RWMutex
 	)
-	fmt.Printf(HEADER, Version, Commit)
+
+	ex, _ := os.Executable()
+	exPath := filepath.Dir(ex)
+
+	fileName := filepath.Join(exPath, "noso-go.log")
+	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println("Error writing to log file: ", err)
+	} else {
+		defer file.Close()
+		mw := io.MultiWriter(os.Stdout, file)
+		log.SetOutput(mw)
+		log.Printf("Writing logs to: %s", fileName)
+	}
+	log.Printf(HEADER, Version, Commit)
 
 	workerReports = make(map[string]Report)
 
@@ -82,9 +100,9 @@ func Mine(opts *Opts) {
 	balance = "0"
 	paymentRequested = time.Now().Add(-3 * time.Hour)
 
-	fmt.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
-	fmt.Printf("Using wallet address: %s\n", opts.Wallet)
-	fmt.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
+	log.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
+	log.Printf("Using wallet address: %s\n", opts.Wallet)
+	log.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
 	comms := NewComms()
 	client := NewTcpClient(opts, comms, true, true)
 
@@ -129,7 +147,7 @@ func Mine(opts *Opts) {
 				hr := hashRate
 				bal := balance
 				m.RUnlock()
-				fmt.Printf(
+				log.Printf(
 					statusMsg,
 					targetBlock,
 					formatHashRate(strconv.Itoa(hr)),

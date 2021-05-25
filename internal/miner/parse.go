@@ -1,7 +1,7 @@
 package miner
 
 import (
-	"fmt"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -19,7 +19,7 @@ const (
 
 func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	if resp == "" {
-		fmt.Println("Got an empty response")
+		log.Println("Got an empty response")
 		return
 	}
 	r := strings.Split(resp, " ")
@@ -31,7 +31,7 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 		poolData(comms, r, 2)
 		comms.Joined <- struct{}{}
 	case PASSFAILED:
-		fmt.Println("Incorrect pool password")
+		log.Println("Incorrect pool password")
 	case PAYMENTOK:
 		LogPaymentResp(r, poolIp)
 	case PONG:
@@ -41,7 +41,7 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	case STEPOK:
 		shares, err := strconv.Atoi(r[1])
 		if err != nil {
-			fmt.Printf("Had trouble parsing the shares from STEPOK message: %v\n", err)
+			log.Printf("Had trouble parsing the shares from STEPOK message: %v\n", err)
 		}
 		comms.StepSolved <- shares
 	case STEPFAIL:
@@ -49,14 +49,14 @@ func Parse(comms *Comms, poolIp string, wallet string, block int, resp string) {
 	case STATUS:
 		comms.PoolStatus <- NewPoolStatus(r[1:])
 	default:
-		fmt.Printf("Uknown response code: %s\n", r[0])
+		log.Printf("Uknown response code: %s\n", r[0])
 	}
 }
 
 func poolData(comms *Comms, resp []string, offset int) {
 	block, err := strconv.Atoi(resp[2+offset])
 	if err != nil {
-		fmt.Printf("Error converting target block: %s\n", resp[2+offset])
+		log.Printf("Error converting target block: %s\n", resp[2+offset])
 	} else {
 		comms.Block <- block
 	}
@@ -65,21 +65,21 @@ func poolData(comms *Comms, resp []string, offset int) {
 
 	targetChars, err := strconv.Atoi(resp[4+offset])
 	if err != nil {
-		fmt.Printf("Error converting target chars: %s\n", resp[4+offset])
+		log.Printf("Error converting target chars: %s\n", resp[4+offset])
 	} else {
 		comms.TargetChars <- targetChars
 	}
 
 	step, err := strconv.Atoi(resp[5+offset])
 	if err != nil {
-		fmt.Printf("Error converting target chars: %s\n", resp[5+offset])
+		log.Printf("Error converting target chars: %s\n", resp[5+offset])
 	} else {
 		comms.Step <- step
 	}
 
 	diff, err := strconv.Atoi(resp[6+offset])
 	if err != nil {
-		fmt.Printf("Error converting target chars: %s\n", resp[6+offset])
+		log.Printf("Error converting target chars: %s\n", resp[6+offset])
 	} else {
 		comms.Diff <- diff
 	}
@@ -88,7 +88,7 @@ func poolData(comms *Comms, resp []string, offset int) {
 
 	blocksTillPayment, err := strconv.Atoi(resp[8+offset])
 	if err != nil {
-		fmt.Printf("Error converting target chars: %s\n", resp[8+offset])
+		log.Printf("Error converting target chars: %s\n", resp[8+offset])
 	} else {
 		comms.BlocksTillPayment <- blocksTillPayment
 	}
@@ -97,7 +97,7 @@ func poolData(comms *Comms, resp []string, offset int) {
 
 	poolDepth, err := strconv.Atoi(resp[10+offset])
 	if err != nil {
-		fmt.Printf("Error converting target chars: %s\n", resp[10+offset])
+		log.Printf("Error converting target chars: %s\n", resp[10+offset])
 	} else {
 		comms.PoolDepth <- poolDepth
 	}

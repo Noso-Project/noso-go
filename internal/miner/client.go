@@ -3,6 +3,7 @@ package miner
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -68,7 +69,7 @@ func (t *TcpClient) manager() {
 
 		conn, err := net.DialTimeout("tcp", t.addr, dialTimeout)
 		if err != nil {
-			fmt.Printf("Error connecting to pool: %v\n", err)
+			log.Printf("Error connecting to pool: %v\n", err)
 		} else {
 			conn.SetReadDeadline(time.Now().Add(connectionTimeout))
 
@@ -92,7 +93,7 @@ func (t *TcpClient) manager() {
 
 		if t.join {
 			// Wait 5 seconds between connection attempts
-			fmt.Printf("Disconnected from pool, will retry connection in %d seconds\n", reconnectSleep/time.Second)
+			log.Printf("Disconnected from pool, will retry connection in %d seconds\n", reconnectSleep/time.Second)
 			time.Sleep(reconnectSleep)
 		}
 	}
@@ -108,7 +109,7 @@ send:
 		select {
 		case msg := <-t.SendChan:
 			if t.showLogs {
-				fmt.Printf("-> %s\n", msg)
+				log.Printf("-> %s\n", msg)
 			}
 			msg = fmt.Sprintf("%s %s\n", t.auth, msg)
 			fmt.Fprintf(conn, msg)
@@ -128,7 +129,7 @@ recv:
 		default:
 			if ok := scanner.Scan(); !ok {
 				if t.showLogs {
-					fmt.Println("Error in connection: ", scanner.Err())
+					log.Println("Error in connection: ", scanner.Err())
 				}
 				t.close(manComms.disconnected)
 				break
@@ -138,7 +139,7 @@ recv:
 				continue
 			}
 			if t.showLogs {
-				fmt.Print("<- " + resp + "\n")
+				log.Print("<- " + resp + "\n")
 			}
 			t.RecvChan <- resp
 			// Since we got something, reset the deadline
@@ -198,7 +199,7 @@ watchdog:
 		case <-manComms.disconnected:
 			break watchdog
 		case <-time.After(connectionTimeout):
-			fmt.Printf("###################\nWatchdog Triggered\n###################\n")
+			log.Printf("###################\nWatchdog Triggered\n###################\n")
 			t.close(manComms.disconnected)
 			break watchdog
 		}
