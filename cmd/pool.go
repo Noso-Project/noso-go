@@ -57,6 +57,7 @@ Start mining with a pool
 ./noso-go mine pool dukedog.io --wallet <your wallet address>
 ./noso-go mine pool mining.moe --wallet <your wallet address>
 ./noso-go mine pool russiapool --wallet <your wallet address>
+./noso-go mine pool yzpool     --wallet <your wallet address>
 `,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if list {
@@ -178,5 +179,10 @@ func loadPools() {
 		IpAddr: "185.239.236.85",
 		IpPort: 8082,
 		PoolPw: "UnMaTcHeD",
+	}
+	pools["yzpool"] = &miner.Opts{
+		IpAddr: "noso.yzpool.gold",
+		IpPort: 8082,
+		PoolPw: "YZpool",
 	}
 }
