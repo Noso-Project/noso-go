@@ -176,7 +176,7 @@ func loadPools() {
 		PoolPw: "miningmoe",
 	}
 	pools["devnoso"] = &miner.Opts{
-		IpAddr: "185.239.236.85",
+		IpAddr: "DevNosoEU.nosocoin.com",
 		IpPort: 8082,
 		PoolPw: "UnMaTcHeD",
 	}
