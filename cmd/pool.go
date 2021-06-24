@@ -24,6 +24,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"sort"
 	"strings"
@@ -98,7 +99,12 @@ Start mining with a pool
 			os.Exit(1)
 		}
 
-		poolOpts.IpAddr = pool.IpAddr
+		ipAddr, err := net.LookupIP(pool.IpAddr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not get IP address for domain: %v\n", err)
+			os.Exit(1)
+		}
+		poolOpts.IpAddr = ipAddr[0].String()
 		poolOpts.IpPort = pool.IpPort
 		poolOpts.PoolPw = pool.PoolPw
 
