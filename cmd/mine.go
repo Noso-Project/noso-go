@@ -23,7 +23,6 @@ package cmd
 
 import (
 	"fmt"
-	"net"
 	"os"
 
 	"github.com/Noso-Project/noso-go/internal/miner"
@@ -51,12 +50,14 @@ Example usage:
 			cmd.PrintErrln("Error: --cpu cannot be less than 1")
 			os.Exit(1)
 		}
-		ipAddr, err := net.LookupIP(mineOpts.IpAddr)
+
+		ipAddr, err := lookupIP(mineOpts.IpAddr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not get IP address for domain: %v\n", err)
 			os.Exit(1)
 		}
-		mineOpts.IpAddr = ipAddr[0].String()
+		mineOpts.IpAddr = ipAddr
+
 		miner.Mine(mineOpts)
 	},
 }
