@@ -50,7 +50,7 @@ List available pools
 ./noso-go mine pool --list
 
 List info about a specific pool
-./noso-go mine pool yzpool --info
+./noso-go mine pool devnoso --info
 
 Start mining with a pool
 ./noso-go mine pool devnoso    --wallet <your wallet address>
@@ -150,6 +150,21 @@ func loadPools() {
 	// TODO: Use github.com/markbates/pkger to package a Yaml
 	//       file instead of hard coding these here
 	pools = make(map[string]*miner.Opts)
+	pools["devnoso"] = &miner.Opts{
+		IpAddr: "DevNosoEU.nosocoin.com",
+		IpPort: 8082,
+		PoolPw: "UnMaTcHeD",
+	}
+	pools["devnosoeu"] = &miner.Opts{
+		IpAddr: "DevNosoEU.nosocoin.com",
+		IpPort: 8082,
+		PoolPw: "UnMaTcHeD",
+	}
+	pools["devnoso.eu"] = &miner.Opts{
+		IpAddr: "DevNosoEU.nosocoin.com",
+		IpPort: 8082,
+		PoolPw: "UnMaTcHeD",
+	}
 	pools["dukedog.io"] = &miner.Opts{
 		IpAddr: "noso.dukedog.io",
 		IpPort: 8082,
@@ -179,11 +194,6 @@ func loadPools() {
 		IpAddr: "Node1.mining.moe",
 		IpPort: 8082,
 		PoolPw: "miningmoe",
-	}
-	pools["devnoso"] = &miner.Opts{
-		IpAddr: "DevNosoEU.nosocoin.com",
-		IpPort: 8082,
-		PoolPw: "UnMaTcHeD",
 	}
 	pools["yzpool"] = &miner.Opts{
 		IpAddr: "noso.yzpool.gold",

@@ -7,6 +7,7 @@
 # #########################################
 
 # Valid Pools:
+#   devnoso
 #   dukedog.io
 #   mining.moe
 #   russiapool
@@ -15,7 +16,7 @@
 # TODO: Check ENVs for pool/wallet/cpu
 #
 # Example values:
-# POOL=yzpool
+# POOL=devnoso
 # WALLET=N3nCJEtfWSB77HHv2tFdKGL7onevyDg
 # CPU=4
 
