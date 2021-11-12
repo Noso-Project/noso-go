@@ -149,6 +149,7 @@ func Mine(opts *Opts) {
 				m.RUnlock()
 				log.Printf(
 					statusMsg,
+					opts.Wallet,
 					targetBlock,
 					formatHashRate(strconv.Itoa(hr)),
 					formatHashRate(poolHashRate),
@@ -247,6 +248,8 @@ const statusMsg = `
 ************************************
 
 Miner Status
+
+Miner's Wallet Addr : %s
 
 Current Block       : %d
 
