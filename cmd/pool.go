@@ -54,10 +54,7 @@ List info about a specific pool
 
 Start mining with a pool
 ./noso-go mine pool devnoso    --wallet <your wallet address>
-./noso-go mine pool dukedog.io --wallet <your wallet address>
-./noso-go mine pool mining.moe --wallet <your wallet address>
 ./noso-go mine pool russiapool --wallet <your wallet address>
-./noso-go mine pool yzpool     --wallet <your wallet address>
 `,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if list {
@@ -165,39 +162,29 @@ func loadPools() {
 		IpPort: 8082,
 		PoolPw: "UnMaTcHeD",
 	}
-	pools["dukedog.io"] = &miner.Opts{
-		IpAddr: "noso.dukedog.io",
+	pools["nosodev"] = &miner.Opts{
+		IpAddr: "pool.noso.dev",
 		IpPort: 8082,
-		PoolPw: "duke",
+		PoolPw: "poolnosodev",
 	}
-	pools["dukedogio"] = &miner.Opts{
-		IpAddr: "noso.dukedog.io",
+	pools["noso.dev"] = &miner.Opts{
+		IpAddr: "pool.noso.dev",
 		IpPort: 8082,
-		PoolPw: "duke",
+		PoolPw: "poolnosodev",
 	}
-	pools["dukedog"] = &miner.Opts{
-		IpAddr: "noso.dukedog.io",
+	pools["poolnosodev"] = &miner.Opts{
+		IpAddr: "pool.noso.dev",
 		IpPort: 8082,
-		PoolPw: "duke",
+		PoolPw: "poolnosodev",
+	}
+	pools["pool.noso.dev"] = &miner.Opts{
+		IpAddr: "pool.noso.dev",
+		IpPort: 8082,
+		PoolPw: "poolnosodev",
 	}
 	pools["russiapool"] = &miner.Opts{
 		IpAddr: "95.54.44.147",
 		IpPort: 8082,
 		PoolPw: "RussiaPool",
-	}
-	pools["mining.moe"] = &miner.Opts{
-		IpAddr: "Node1.mining.moe",
-		IpPort: 8082,
-		PoolPw: "miningmoe",
-	}
-	pools["miningmoe"] = &miner.Opts{
-		IpAddr: "Node1.mining.moe",
-		IpPort: 8082,
-		PoolPw: "miningmoe",
-	}
-	pools["yzpool"] = &miner.Opts{
-		IpAddr: "noso.yzpool.gold",
-		IpPort: 8082,
-		PoolPw: "YZpool",
 	}
 }
