@@ -48,6 +48,7 @@ type Comms struct {
 	Joined            chan struct{}
 	Pong              chan struct{}
 	PoolStatus        chan PoolStatus
+	Disconnected      chan struct{}
 }
 
 type Report struct {
