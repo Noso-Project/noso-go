@@ -21,6 +21,7 @@ func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 		comms:     comms,
 		addr:      fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
 		auth:      fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),
+		wallet:    opts.Wallet,
 		SendChan:  make(chan string, 100),
 		RecvChan:  make(chan string, 100),
 		connected: make(chan interface{}, 0),
@@ -39,6 +40,7 @@ type TcpClient struct {
 	comms     *Comms
 	addr      string // "poolIP:poolPort"
 	auth      string // "poolPw wallet"
+	wallet    string
 	SendChan  chan string
 	RecvChan  chan string
 	conn      net.Conn
@@ -184,7 +186,7 @@ ping:
 			m.RLock()
 			hr := hashRate
 			m.RUnlock()
-			t.SendChan <- fmt.Sprintf("PING %d", hr/1000)
+			t.SendChan <- fmt.Sprintf("PING %d %s", hr/1000, t.wallet)
 		}
 	}
 }
