@@ -68,6 +68,7 @@ func NewManagerComms() *managerComms {
 func (t *TcpClient) manager() {
 	for {
 		manComms := NewManagerComms()
+		t.comms.Disconnected = manComms.disconnected
 
 		conn, err := net.DialTimeout("tcp", t.addr, dialTimeout)
 		if err != nil {
