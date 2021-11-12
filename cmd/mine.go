@@ -71,6 +71,7 @@ func init() {
 	mineCmd.Flags().StringVarP(&mineOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
 	mineCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 	mineCmd.Flags().BoolVarP(&mineOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
+	mineCmd.Flags().IntVar(&mineOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
 
 	mineCmd.MarkFlagRequired("address")
 	mineCmd.MarkFlagRequired("password")
