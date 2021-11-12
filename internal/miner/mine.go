@@ -138,11 +138,11 @@ func Mine(opts *Opts) {
 	// Create the payments.csv file if it doesn't already exist
 	CreateLogPaymentsFile()
 
-	// Print a reward status every 60 seconds
+	// Print a reward status every StatusInterval seconds (default 60)
 	go func() {
 		for {
 			select {
-			case <-time.After(60 * time.Second):
+			case <-time.After(time.Duration(opts.StatusInterval) * time.Second):
 				m.RLock()
 				hr := hashRate
 				bal := balance
