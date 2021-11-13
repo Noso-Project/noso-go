@@ -72,6 +72,7 @@ func init() {
 	mineCmd.Flags().IntVarP(&mineOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 	mineCmd.Flags().BoolVarP(&mineOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 	mineCmd.Flags().IntVar(&mineOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
+	mineCmd.Flags().BoolVarP(&mineOpts.ExitOnRetry, "exit-on-retry", "", false, "Quit noso-go if pool connection is lost")
 
 	mineCmd.MarkFlagRequired("address")
 	mineCmd.MarkFlagRequired("password")

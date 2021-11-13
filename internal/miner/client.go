@@ -17,16 +17,18 @@ const (
 
 func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 	client := &TcpClient{
-		minerVer:  MinerName,
-		comms:     comms,
-		addr:      fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
-		auth:      fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),
-		SendChan:  make(chan string, 100),
-		RecvChan:  make(chan string, 100),
-		connected: make(chan interface{}, 0),
-		mutex:     &sync.Mutex{},
-		showLogs:  showLogs,
-		join:      join,
+		minerVer:    MinerName,
+		comms:       comms,
+		addr:        fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
+		auth:        fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),
+		wallet:      opts.Wallet,
+		SendChan:    make(chan string, 100),
+		RecvChan:    make(chan string, 100),
+		connected:   make(chan interface{}, 0),
+		mutex:       &sync.Mutex{},
+		showLogs:    showLogs,
+		join:        join,
+		exitOnRetry: opts.ExitOnRetry,
 	}
 
 	go client.manager()
@@ -35,17 +37,19 @@ func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 }
 
 type TcpClient struct {
-	minerVer  string
-	comms     *Comms
-	addr      string // "poolIP:poolPort"
-	auth      string // "poolPw wallet"
-	SendChan  chan string
-	RecvChan  chan string
-	conn      net.Conn
-	connected chan interface{}
-	mutex     *sync.Mutex
-	showLogs  bool
-	join      bool
+	minerVer    string
+	comms       *Comms
+	addr        string // "poolIP:poolPort"
+	auth        string // "poolPw wallet"
+	wallet      string
+	SendChan    chan string
+	RecvChan    chan string
+	conn        net.Conn
+	connected   chan interface{}
+	mutex       *sync.Mutex
+	showLogs    bool
+	join        bool
+	exitOnRetry bool
 }
 
 type managerComms struct {
@@ -92,7 +96,7 @@ func (t *TcpClient) manager() {
 			conn.Close()
 		}
 
-		if t.join {
+		if t.join && !t.exitOnRetry {
 			// Wait 5 seconds between connection attempts
 			log.Printf("Disconnected from pool, will retry connection in %d seconds\n", reconnectSleep/time.Second)
 			time.Sleep(reconnectSleep)

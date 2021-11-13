@@ -166,6 +166,7 @@ func Mine(opts *Opts) {
 	// TODO: Sending individual info (block, chars, string, etc
 	//       will probably lead to a race condition. Send a
 	//       BlockUpdate struct instead with all info?
+main:
 	for {
 		select {
 		case poolAddr = <-comms.PoolAddr:
@@ -240,7 +241,16 @@ func Mine(opts *Opts) {
 			comms.HashRate <- hr
 		case resp = <-client.RecvChan:
 			go Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
+		case <-comms.Disconnected:
+			if opts.ExitOnRetry {
+				break main
+			}
 		}
+	}
+
+	if opts.ExitOnRetry {
+		// TODO: This will exit with code 0. Should it be non-zero?
+		fmt.Println("Connection lost and --exit-on-retry flag is True. Exiting")
 	}
 }
 
