@@ -3,7 +3,6 @@ package miner
 import (
 	"fmt"
 	"log"
-	"strings"
 )
 
 func NewSolutionComms(sendChan chan string) *SolutionComms {
@@ -87,10 +86,10 @@ func SolutionManager(solComms *SolutionComms, showPop bool) {
 func printFoundSolution(sol Solution, isStep bool) {
 	stepOrPop := "PoP"
 	if isStep {
-		stepOrPop = "Step"
+		stepOrPop = "STEP"
 	}
 	log.Printf(
-		strings.ToUpper(found_one),
+		found_one,
 		stepOrPop,
 		sol.Block,
 		sol.Step,
