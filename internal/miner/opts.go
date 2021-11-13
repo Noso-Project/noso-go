@@ -8,4 +8,5 @@ type Opts struct {
 	Wallet         string
 	ShowPop        bool
 	StatusInterval int
+	ExitOnRetry    bool
 }

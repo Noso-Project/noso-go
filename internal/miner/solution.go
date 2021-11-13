@@ -3,6 +3,7 @@ package miner
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 func NewSolutionComms(sendChan chan string) *SolutionComms {
@@ -89,7 +90,7 @@ func printFoundSolution(sol Solution, isStep bool) {
 		stepOrPop = "Step"
 	}
 	log.Printf(
-		found_one,
+		strings.ToUpper(found_one),
 		stepOrPop,
 		sol.Block,
 		sol.Step,
@@ -102,7 +103,8 @@ func printFoundSolution(sol Solution, isStep bool) {
 	)
 }
 
-const found_one = `************************************
+const found_one = `
+************************************
 FOUND %s SOLUTION
 Block         : %d
 Step          : %d

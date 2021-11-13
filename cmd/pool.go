@@ -121,6 +121,7 @@ func init() {
 	poolCmd.Flags().IntVarP(&poolOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 	poolCmd.Flags().BoolVarP(&poolOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 	poolCmd.Flags().IntVar(&poolOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
+	poolCmd.Flags().BoolVarP(&poolOpts.ExitOnRetry, "exit-on-retry", "", false, "Quit noso-go if pool connection is lost")
 
 	poolCmd.Flags().SortFlags = false
 	poolCmd.Flags().PrintDefaults()
