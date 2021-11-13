@@ -45,7 +45,7 @@ WALLET+=" leviablefarmy14"
 
 while true; do
   for wallet in ${WALLET:?Variable not set or is empty}; do
-    ./bin/noso-go-linux-amd64 mine pool \
+    ./noso-go mine pool \
         "${POOL:?Variable not set or is empty}" \
         --wallet "$wallet" \
         --cpu ${CPU:?Variable not set or is empty} \
