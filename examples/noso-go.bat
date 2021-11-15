@@ -8,8 +8,7 @@ Rem #################################
 
 REM Valid Pools:
 REM   DevNoso
-REM   dukedog.io
-REM   mining.moe
+REM   leviable
 REM   russiapool
 
 set "POOL=DevNoso"
