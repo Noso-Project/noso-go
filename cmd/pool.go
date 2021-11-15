@@ -54,6 +54,7 @@ List info about a specific pool
 
 Start mining with a pool
 ./noso-go mine pool devnoso    --wallet <your wallet address>
+./noso-go mine pool leviable   --wallet <your wallet address>
 ./noso-go mine pool russiapool --wallet <your wallet address>
 `,
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -167,6 +168,11 @@ func loadPools() {
 		IpPort: 8082,
 		PoolPw: "poolnosodev",
 	}
+	pools["leviable"] = &miner.Opts{
+		IpAddr: "pool.noso.dev",
+		IpPort: 8082,
+		PoolPw: "poolnosodev",
+	}	
 	pools["noso.dev"] = &miner.Opts{
 		IpAddr: "pool.noso.dev",
 		IpPort: 8082,
