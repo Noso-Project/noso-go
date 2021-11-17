@@ -8,10 +8,8 @@
 
 # Valid Pools:
 #   devnoso
-#   dukedog.io
-#   mining.moe
+#   leviable
 #   russiapool
-#   yzpool
 
 # TODO: Check ENVs for pool/wallet/cpu
 #
