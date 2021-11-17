@@ -75,7 +75,7 @@ Get status of a pool
 		pool := pools[poolName]
 
 		if info {
-			printPoolInfo(poolName, pool)
+			printPoolInfo(pool)
 			return
 		}
 
@@ -85,9 +85,9 @@ Get status of a pool
 			os.Exit(1)
 		}
 
-		poolOpts.IpAddr = pool.IpAddr
-		poolOpts.IpPort = pool.IpPort
-		poolOpts.PoolPw = pool.PoolPw
+		poolOpts.IpAddr = pool.opts.IpAddr
+		poolOpts.IpPort = pool.opts.IpPort
+		poolOpts.PoolPw = pool.opts.PoolPw
 
 		miner.GetPoolStatus(poolOpts)
 	},

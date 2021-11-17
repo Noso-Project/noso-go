@@ -35,9 +35,15 @@ import (
 var (
 	list     bool
 	info     bool
-	pools    map[string]*miner.Opts
+	pools    map[string]PoolInfo
 	poolOpts = &miner.Opts{}
 )
+
+type PoolInfo struct {
+	primary string
+	aliases []string
+	opts    *miner.Opts
+}
 
 // poolCmd represents the pool command
 var poolCmd = &cobra.Command{
@@ -81,7 +87,7 @@ Start mining with a pool
 		pool := pools[poolName]
 
 		if info {
-			printPoolInfo(poolName, pool)
+			printPoolInfo(pool)
 			return
 		}
 
@@ -96,14 +102,14 @@ Start mining with a pool
 			os.Exit(1)
 		}
 
-		ipAddr, err := lookupIP(pool.IpAddr)
+		ipAddr, err := lookupIP(pool.opts.IpAddr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not get IP address for domain: %v\n", err)
 			os.Exit(1)
 		}
 		poolOpts.IpAddr = ipAddr
-		poolOpts.IpPort = pool.IpPort
-		poolOpts.PoolPw = pool.PoolPw
+		poolOpts.IpPort = pool.opts.IpPort
+		poolOpts.PoolPw = pool.opts.PoolPw
 
 		miner.Mine(poolOpts)
 	},
@@ -125,23 +131,31 @@ func init() {
 	poolCmd.Flags().PrintDefaults()
 }
 
-func printPoolInfo(poolName string, poolOpts *miner.Opts) {
+func printPoolInfo(p PoolInfo) {
 	msg := `Pool info for %s:
 	Pool Address : %s
 	Pool Port    : %d
 	Pool Password: %s
 `
-	fmt.Printf(msg, poolName, poolOpts.IpAddr, poolOpts.IpPort, poolOpts.PoolPw)
+	fmt.Printf(msg, p.primary, p.opts.IpAddr, p.opts.IpPort, p.opts.PoolPw)
 }
 
 func listPools() {
-	poolNames := []string{}
-	for pool, _ := range pools {
-		poolNames = append(poolNames, pool)
+	poolNames := make(map[string]bool)
+	for _, pool := range pools {
+		name := pool.primary
+		if _, ok := poolNames[name]; !ok {
+			poolNames[name] = true
+		}
 	}
-	sort.Strings(poolNames)
 
-	nameList := strings.Join(poolNames, "\n\t- ")
+	names := []string{}
+	for k, _ := range poolNames {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+
+	nameList := strings.Join(names, "\n\t- ")
 	fmt.Printf("Please use one of the following pool names:\n\t- %s\n", nameList)
 }
 
@@ -149,50 +163,38 @@ func loadPools() {
 	// TODO: support loading a pools config file at runtime too
 	// TODO: Use github.com/markbates/pkger to package a Yaml
 	//       file instead of hard coding these here
-	pools = make(map[string]*miner.Opts)
-	pools["devnoso"] = &miner.Opts{
-		IpAddr: "DevNosoEU.nosocoin.com",
-		IpPort: 8082,
-		PoolPw: "UnMaTcHeD",
+	pools = make(map[string]PoolInfo)
+	pools["devnoso"] = PoolInfo{
+		primary: "devnoso",
+		aliases: []string{"devnoso", "devnosoeu", "devnoso.eu"},
+		opts: &miner.Opts{
+			IpAddr: "DevNosoEU.nosocoin.com",
+			IpPort: 8082,
+			PoolPw: "UnMaTcHeD",
+		},
 	}
-	pools["devnosoeu"] = &miner.Opts{
-		IpAddr: "DevNosoEU.nosocoin.com",
-		IpPort: 8082,
-		PoolPw: "UnMaTcHeD",
+	pools["leviable"] = PoolInfo{
+		primary: "leviable",
+		aliases: []string{"leviable", "nosodev", "noso.dev", "poolnosodev", "pool.noso.dev"},
+		opts: &miner.Opts{
+			IpAddr: "pool.noso.dev",
+			IpPort: 8082,
+			PoolPw: "password",
+		},
 	}
-	pools["devnoso.eu"] = &miner.Opts{
-		IpAddr: "DevNosoEU.nosocoin.com",
-		IpPort: 8082,
-		PoolPw: "UnMaTcHeD",
+	pools["russiapool"] = PoolInfo{
+		primary: "russiapool",
+		aliases: []string{"russiapool"},
+		opts: &miner.Opts{
+			IpAddr: "95.54.44.147",
+			IpPort: 8082,
+			PoolPw: "RussiaPool",
+		},
 	}
-	pools["nosodev"] = &miner.Opts{
-		IpAddr: "pool.noso.dev",
-		IpPort: 8082,
-		PoolPw: "poolnosodev",
-	}
-	pools["leviable"] = &miner.Opts{
-		IpAddr: "pool.noso.dev",
-		IpPort: 8082,
-		PoolPw: "poolnosodev",
-	}	
-	pools["noso.dev"] = &miner.Opts{
-		IpAddr: "pool.noso.dev",
-		IpPort: 8082,
-		PoolPw: "poolnosodev",
-	}
-	pools["poolnosodev"] = &miner.Opts{
-		IpAddr: "pool.noso.dev",
-		IpPort: 8082,
-		PoolPw: "poolnosodev",
-	}
-	pools["pool.noso.dev"] = &miner.Opts{
-		IpAddr: "pool.noso.dev",
-		IpPort: 8082,
-		PoolPw: "poolnosodev",
-	}
-	pools["russiapool"] = &miner.Opts{
-		IpAddr: "95.54.44.147",
-		IpPort: 8082,
-		PoolPw: "RussiaPool",
+
+	for _, pool := range pools {
+		for _, alias := range pool.aliases {
+			pools[alias] = pool
+		}
 	}
 }
