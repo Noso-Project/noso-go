@@ -120,13 +120,14 @@ send:
 	for {
 		select {
 		case msg := <-t.SendChan:
-			if msg[:4] == "JOIN" {
+			if t.auth == "" || msg[:4] == "JOIN" {
 				t.SetAuth()
 			}
 
 			if t.showLogs {
 				log.Printf("-> %s\n", msg)
 			}
+
 			msg = fmt.Sprintf("%s %s\n", t.auth, msg)
 			fmt.Fprintf(conn, msg)
 		case <-manComms.disconnected:
