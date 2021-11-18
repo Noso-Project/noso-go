@@ -5,7 +5,8 @@ type Opts struct {
 	IpAddr         string
 	IpPort         int
 	PoolPw         string
-	Wallet         string
+	Wallets        []string
+	CurrentWallet  string
 	ShowPop        bool
 	StatusInterval int
 	ExitOnRetry    bool

@@ -19,9 +19,8 @@ func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 	client := &TcpClient{
 		minerVer:    MinerName,
 		comms:       comms,
+		opts:        opts,
 		addr:        fmt.Sprintf("%s:%d", opts.IpAddr, opts.IpPort),
-		auth:        fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallet),
-		wallet:      opts.Wallet,
 		SendChan:    make(chan string, 100),
 		RecvChan:    make(chan string, 100),
 		connected:   make(chan interface{}, 0),
@@ -39,9 +38,9 @@ func NewTcpClient(opts *Opts, comms *Comms, showLogs, join bool) *TcpClient {
 type TcpClient struct {
 	minerVer    string
 	comms       *Comms
+	opts        *Opts
 	addr        string // "poolIP:poolPort"
 	auth        string // "poolPw wallet"
-	wallet      string
 	SendChan    chan string
 	RecvChan    chan string
 	conn        net.Conn
@@ -64,6 +63,14 @@ func NewManagerComms() *managerComms {
 		disconnected: make(chan struct{}, 0),
 		joined:       make(chan struct{}, 0),
 	}
+}
+
+func (t *TcpClient) SetAuth() {
+	t.opts.CurrentWallet = t.opts.Wallets[0]
+	t.opts.Wallets = append(t.opts.Wallets[1:], t.opts.CurrentWallet)
+	t.auth = fmt.Sprintf("%s %s", t.opts.PoolPw, t.opts.CurrentWallet)
+
+	log.Printf("Using wallet address: %s\n", t.opts.CurrentWallet)
 }
 
 // Manages the TCP connection and send/recv/ping goroutines
@@ -113,6 +120,10 @@ send:
 	for {
 		select {
 		case msg := <-t.SendChan:
+			if msg[:4] == "JOIN" {
+				t.SetAuth()
+			}
+
 			if t.showLogs {
 				log.Printf("-> %s\n", msg)
 			}

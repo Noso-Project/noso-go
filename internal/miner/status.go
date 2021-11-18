@@ -36,7 +36,7 @@ func GetPoolStatus(opts *Opts) {
 	)
 
 	log.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
-	log.Printf("Using wallet address: %s\n", opts.Wallet)
+	log.Printf("Using wallet address: %s\n", opts.CurrentWallet)
 	comms := NewComms()
 	client := NewTcpClient(opts, comms, false, false)
 
@@ -46,7 +46,7 @@ loop:
 	for {
 		select {
 		case resp = <-client.RecvChan:
-			go Parse(comms, opts.IpAddr, opts.Wallet, 0, resp)
+			go Parse(comms, opts.IpAddr, opts.CurrentWallet, 0, resp)
 		case status := <-comms.PoolStatus:
 			status.PrettyPrint()
 			break loop

@@ -79,7 +79,7 @@ Get status of a pool
 			return
 		}
 
-		if poolOpts.Wallet == "" {
+		if len(poolOpts.Wallets) == 0 {
 			cmd.PrintErrln("Error: required flag(s) \"--wallet\" not set")
 			cmd.PrintErrf("Run '%v --help' for usage.\n", cmd.CommandPath())
 			os.Exit(1)
@@ -98,7 +98,7 @@ func init() {
 
 	statusCmd.Flags().BoolVarP(&list, "list", "l", false, "List known pool names")
 	statusCmd.Flags().BoolVarP(&info, "info", "i", false, "Print Pool information and exit")
-	statusCmd.Flags().StringVarP(&poolOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
+	statusCmd.Flags().StringSliceVarP(&poolOpts.Wallets, "wallet", "w", []string{}, "Noso wallet address to send payments to")
 
 	statusCmd.Flags().SortFlags = false
 	statusCmd.Flags().PrintDefaults()
