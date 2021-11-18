@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -101,7 +102,7 @@ func Mine(opts *Opts) {
 	paymentRequested = time.Now().Add(-3 * time.Hour)
 
 	log.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
-	log.Printf("Using wallet address: %s\n", opts.Wallet)
+	log.Printf("Using wallet address(es): %s\n", strings.Join(opts.Wallets, " "))
 	log.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
 	comms := NewComms()
 	client := NewTcpClient(opts, comms, true, true)
@@ -149,7 +150,7 @@ func Mine(opts *Opts) {
 				m.RUnlock()
 				log.Printf(
 					statusMsg,
-					opts.Wallet,
+					opts.CurrentWallet,
 					targetBlock,
 					formatHashRate(strconv.Itoa(hr)),
 					formatHashRate(poolHashRate),
@@ -208,7 +209,7 @@ main:
 			// And we haven't requested payment in at least 10 minutes
 			if balance != "0" && blocksTillPayment > 0 && time.Since(paymentRequested) > 10*time.Minute {
 				client.SendChan <- "PAYMENT"
-				LogPaymentReq(opts.IpAddr, opts.Wallet, targetBlock, balance)
+				LogPaymentReq(opts.IpAddr, opts.CurrentWallet, targetBlock, balance)
 				paymentRequested = time.Now()
 			} else if blocksTillPayment > 0 {
 				btpNote = fmt.Sprint(`(* Note: A positive number here means you will
@@ -240,7 +241,7 @@ main:
 			m.Unlock()
 			comms.HashRate <- hr
 		case resp = <-client.RecvChan:
-			go Parse(comms, opts.IpAddr, opts.Wallet, targetBlock, resp)
+			go Parse(comms, opts.IpAddr, opts.CurrentWallet, targetBlock, resp)
 		case <-comms.Disconnected:
 			if opts.ExitOnRetry {
 				break main

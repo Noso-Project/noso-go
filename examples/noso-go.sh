@@ -11,16 +11,20 @@
 #   leviable
 #   russiapool
 
-# TODO: Check ENVs for pool/wallet/cpu
-#
 # Example values:
-# POOL=devnoso
-# WALLET=N3nCJEtfWSB77HHv2tFdKGL7onevyDg
+# POOL="devnoso"
+# WALLET="devteam_donations"
 # CPU=4
 
-POOL=
-WALLET=
-CPU=
+# You can specify multiple wallet addresses, which will be
+# cycled through round-robin after each disconnect. Useful
+# If you want to maintain a single shell script for multiple
+# miners (Note you MUST suround wallet addresses with quotes:
+# WALLET="leviable leviabl2 leviable3"
+
+POOL="devnoso"
+WALLET=""
+CPU=1
 
 # #########################################
 # 
@@ -28,10 +32,16 @@ CPU=
 # 
 # #########################################
 
+echo $WALLET
+
+for wallet in ${WALLET:?Variable not set or is empty}; do
+    wallets+=" --wallet $wallet"
+done
+
 while true; do
   ./noso-go mine pool \
     "${POOL:?Variable not set or is empty}" \
-    --wallet "${WALLET:?Variable not set or is empty}" \
+    $wallets \
     --cpu ${CPU:?Variable not set or is empty}
 
   if [ "$?" != "0" ]; then

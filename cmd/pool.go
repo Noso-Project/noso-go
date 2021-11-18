@@ -91,7 +91,7 @@ Start mining with a pool
 			return
 		}
 
-		if poolOpts.Wallet == "" {
+		if len(poolOpts.Wallets) == 0 {
 			cmd.PrintErrln("Error: required flag(s) \"--wallet\" not set")
 			cmd.PrintErrf("Run '%v --help' for usage.\n", cmd.CommandPath())
 			os.Exit(1)
@@ -121,7 +121,7 @@ func init() {
 
 	poolCmd.Flags().BoolVarP(&list, "list", "l", false, "List known pool names")
 	poolCmd.Flags().BoolVarP(&info, "info", "i", false, "Print Pool information and exit")
-	poolCmd.Flags().StringVarP(&poolOpts.Wallet, "wallet", "w", "", "Noso wallet address to send payments to")
+	poolCmd.Flags().StringSliceVarP(&poolOpts.Wallets, "wallet", "w", []string{}, "Noso wallet address to send payments to")
 	poolCmd.Flags().IntVarP(&poolOpts.Cpu, "cpu", "c", 4, "Number of CPU cores to use")
 	poolCmd.Flags().BoolVarP(&poolOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 	poolCmd.Flags().IntVar(&poolOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
