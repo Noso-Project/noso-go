@@ -10,75 +10,14 @@
 
 ## Quickstart
 
-Download the latest release for your OS and architecture from the [Releases Page](https://github.com/Noso-Project/noso-go/releases)
-
-In most instances you will want the `64` version unless you have a fairly old computer
-
-### Quickstart - Windows
-
-1. Unzip the release
-2. Edit the `noso-go.bat` file
-3. Update the CPU line with the number of PHYSICAL cores you want to use
-4. Update the WALLET line with your wallet address
-5. Save and close
-6. Double click the noso-go.bat file
-
-NOTE: To find out how many physical cores you have, you can run the following command in the command prompt (works on Windows 2000/NT or later):
-```
-wmic computersystem get numberoflogicalprocessors
-```
-
-### Quickstart - Linux/Mac/ARM
-Untar the archive:
-
-```
-$ tar -zxvf noso-go-v0.8.0-linux-amd64.tgz
-x noso-go
-```
-
-*NOTE* You should set `--cpu` to the maximum *PHYSICAL* cores on your computer. `go-miner` cannot use hyperthreading/hardware-threads, so setting `--cpu` higher than your *PHYSICAL* cores will likely reduce your overall hashrate.
-
-```
-./noso-go mine \
-    --address <IP Address or URL of the Noso pool> \
-    --port <Port of the Noso pool>
-    --password <Password for the Noso pool> \
-    --wallet <Your wallet address> \
-    --cpu <Number of CPU cores to use when mining>
-```
-
-e.g.
-
-```
-./noso-go mine \
-    --address noso.dukedog.io \
-    --port 8082 \
-    --password duke \
-    --wallet Nm6jiGfRg7DVHHMfbMJL9CT1DtkUCF \
-    --cpu 4
-```
-
-NOTE: If you get a permissions error, run this command in your terminal window, then try again:
-```
-chmod a+x noso-go
-```
-
-### Quickstart - Android
-
-1. Download the latest 'linux-arm64' (or 'linux-arm') tar archive, and extract its contents to a local folder on your Android device.
-2. From the Google Play Store, Install [RS File Manager](https://play.google.com/store/apps/details?id=com.rs.explorer.filemanager)
-3. From the Google Play Store, Install [Termux](https://play.google.com/store/apps/details?id=com.termux)
-4. Open RS File Manager and browse to the location where you placed your noso-go arm file(s)
-5. Press and hold on the noso-go file, select the menu and choose "Open As", then select "Termux" (Optional: In Termux, you can type ```ls``` to list your arm file(s). This verifies that Termux started in the right folder.
-6. To start the noso-go miner, use the following command:
-```
-./noso-go mine --address <pool IP or URL> --port <Pool's Port Number> --password <Pool's Password> --wallet <Your Noso Wallet Address> --cpu <Number of physical cores on your CPU>
-```
-
-Note: When using all physical cores on your Android device, you may want to make sure it is in a well-cooled area so that heat does not become a problem.
+* [Windows](docs/quickstart-windows.md)
+* [Linux](docs/quickstart-linux.md)
+* [MacOs](docs/quickstart-macos.md)
+* [Raspberry Pi](docs/quickstart-raspberrypi.md)
+* [Android](docs/quickstart-android.md)
 
 ## Introduction
-`noso-go` is a command line tool for mining the crypto currency [Noso Coin](https://nosocoin.com/). Written using Google's Go language, `noso-go`'s goals are as follows:
+`noso-go` is a command line tool for mining the cryptocurrency [Noso Coin](https://nosocoin.com/). Written using Google's Go language, `noso-go`'s goals are as follows:
 
 * Free to use
 * Highly concurrent
@@ -92,6 +31,7 @@ Note: When using all physical cores on your Android device, you may want to make
 * Linux (32 and 64 bit)
 * MacOS (64 bit)
 * Raspberry Pi (arm64)
+* Google Pixel 2 (arm64)
 * Google Pixel 5 (arm64)
 
 ## Understanding the output
@@ -114,6 +54,25 @@ Future version of `noso-go` will have a more user friendly output. For now, you 
 * Balance: 9.53841173 Noso
 * Blocks Till Payment: 5
 * Pool HashRate: 336.517 MegaHashes/second
+
+A `status` message will display every 60 seconds:
+
+```
+************************************
+Miner Status
+Miner's Wallet Addr : leviable3
+Current Block       : 33383
+Miner Hash Rate     :  55.302 Mhash/s
+Pool Hash Rate      :   1.632 Ghash/s
+Pool Balance        : 22.40475776 Noso
+Blocks Till Payment : -20
+
+Proof of Participation
+----------------------
+PoP Sent            : 813
+PoP Accepted        : 808
+************************************
+```
 
 ## Benchmarking
 

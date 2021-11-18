@@ -32,8 +32,6 @@ CPU=1
 # 
 # #########################################
 
-echo $WALLET
-
 for wallet in ${WALLET:?Variable not set or is empty}; do
     wallets+=" --wallet $wallet"
 done

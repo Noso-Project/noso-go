@@ -270,6 +270,7 @@ Pool Hash Rate      : %s
 Pool Balance        : %s
 Blocks Till Payment : %d %s
 
+
 Proof of Participation
 ----------------------
 PoP Sent            : %d
