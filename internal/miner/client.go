@@ -82,6 +82,9 @@ func (t *TcpClient) manager() {
 		conn, err := net.DialTimeout("tcp", t.addr, dialTimeout)
 		if err != nil {
 			log.Printf("Error connecting to pool: %v\n", err)
+			if t.exitOnRetry {
+				t.close(manComms.disconnected)
+			}
 		} else {
 			conn.SetReadDeadline(time.Now().Add(connectionTimeout))
 
