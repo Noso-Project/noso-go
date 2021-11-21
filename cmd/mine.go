@@ -23,7 +23,9 @@ package cmd
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
@@ -51,6 +53,12 @@ Example usage:
 			os.Exit(1)
 		}
 
+		if randomize, _ := cmd.Flags().GetBool("random-wallet"); randomize {
+			w := mineOpts.Wallets
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(w), func(i, j int) { w[i], w[j] = w[j], w[i] })
+		}
+
 		ipAddr, err := lookupIP(mineOpts.IpAddr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not get IP address for domain: %v\n", err)
@@ -73,6 +81,7 @@ func init() {
 	mineCmd.Flags().BoolVarP(&mineOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 	mineCmd.Flags().IntVar(&mineOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
 	mineCmd.Flags().BoolVarP(&mineOpts.ExitOnRetry, "exit-on-retry", "", false, "Quit noso-go if pool connection is lost")
+	mineCmd.Flags().BoolP("random-wallet", "", false, "Randomize order wallets are used")
 
 	mineCmd.MarkFlagRequired("address")
 	mineCmd.MarkFlagRequired("password")
