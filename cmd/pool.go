@@ -24,9 +24,11 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
@@ -97,6 +99,12 @@ Start mining with a pool
 			os.Exit(1)
 		}
 
+		if randomize, _ := cmd.Flags().GetBool("random-wallet"); randomize {
+			w := poolOpts.Wallets
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(w), func(i, j int) { w[i], w[j] = w[j], w[i] })
+		}
+
 		if poolOpts.Cpu < 1 {
 			cmd.PrintErrln("Error: --cpu cannot be less than 1")
 			os.Exit(1)
@@ -126,6 +134,7 @@ func init() {
 	poolCmd.Flags().BoolVarP(&poolOpts.ShowPop, "show-pop", "", false, "Show PoP solutions in output")
 	poolCmd.Flags().IntVar(&poolOpts.StatusInterval, "status-interval", 60, "Status Interval Timer (in seconds)")
 	poolCmd.Flags().BoolVarP(&poolOpts.ExitOnRetry, "exit-on-retry", "", false, "Quit noso-go if pool connection is lost")
+	poolCmd.Flags().BoolP("random-wallet", "", false, "Randomize order wallets are used")
 
 	poolCmd.Flags().SortFlags = false
 	poolCmd.Flags().PrintDefaults()
