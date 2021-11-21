@@ -40,9 +40,14 @@ while true; do
   ./noso-go mine pool \
     "${POOL:?Variable not set or is empty}" \
     $wallets \
-    --cpu ${CPU:?Variable not set or is empty}
+    --cpu ${CPU:?Variable not set or is empty} \
+    --exit-on-retry \
+    --random-wallet
 
-  if [ "$?" != "0" ]; then
-      exit 1
+  exit_code=$?
+  if [ "$exit_code" != "1" ]; then
+      continue
+  else
+      exit $exit_code
   fi
 done

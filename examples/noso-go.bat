@@ -32,6 +32,6 @@ FOR %%A IN (!WALLET!) DO set wallets=!wallets! --wallet %%A
 tasklist /FI "IMAGENAME eq noso-go.exe" 2>NUL | find /I /N "noso-go.exe">NUL
 if "%ERRORLEVEL%"=="0" taskkill /F /im noso-go.exe
 
-noso-go.exe mine pool !POOL! !wallets! --cpu !CPU!
+noso-go.exe mine pool !POOL! !wallets! --cpu !CPU! --exit-on-retry --random-wallet
 timeout 10
 goto loop
