@@ -116,7 +116,7 @@ func (t *TcpClient) manager() {
 
 func (t *TcpClient) send(conn net.Conn, manComms *managerComms) {
 	if t.join {
-		go func() { t.SendChan <- fmt.Sprintf("JOIN %s", t.minerVer) }()
+		go func() { t.SendChan <- fmt.Sprintf("JOIN %s %s", t.minerVer, instanceId) }()
 	}
 
 send:
@@ -204,7 +204,7 @@ ping:
 			m.RLock()
 			hr := hashRate
 			m.RUnlock()
-			t.SendChan <- fmt.Sprintf("PING %d", hr/1000)
+			t.SendChan <- fmt.Sprintf("PING %d %s", hr/1000, instanceId)
 		}
 	}
 }

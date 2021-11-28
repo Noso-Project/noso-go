@@ -77,7 +77,7 @@ func SolutionManager(solComms *SolutionComms, showPop bool) {
 				// High step solution
 				printFoundSolution(sol, true)
 			}
-			solComms.SendChan <- fmt.Sprintf("STEP %d %s %s %d", sol.Block, sol.Seed, sol.HashStr, sol.TargetLen)
+			solComms.SendChan <- fmt.Sprintf("STEP %d %s %s %d %s", sol.Block, sol.Seed, sol.HashStr, sol.TargetLen, instanceId)
 			solComms.StepSent <- struct{}{}
 		}
 	}

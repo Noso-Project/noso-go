@@ -102,8 +102,10 @@ func Mine(opts *Opts) {
 	paymentRequested = time.Now().Add(-3 * time.Hour)
 
 	log.Printf("Connecting to %s:%d with password %s\n", opts.IpAddr, opts.IpPort, opts.PoolPw)
-	log.Printf("Using wallet address(es): %s\n", strings.Join(opts.Wallets, " "))
-	log.Printf("Number of CPU cores to use: %d\n", opts.Cpu)
+	log.Printf("Using wallet address(es)   : %s\n", strings.Join(opts.Wallets, " "))
+	log.Printf("Number of CPU cores to use : %d\n", opts.Cpu)
+	log.Printf("Device ID                  : %s\n", deviceId)
+	log.Printf("Instance ID                : %s\n", instanceId)
 	comms := NewComms()
 	client := NewTcpClient(opts, comms, true, true)
 
