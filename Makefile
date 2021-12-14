@@ -1,6 +1,7 @@
 WORKDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 APP := noso-go
+BINARIES := $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
 
 REVISION := $(shell git rev-parse --short=8 HEAD)
 TAG := $(shell git describe --tags --exact-match $(REVISION) 2>/dev/null)
@@ -19,8 +20,20 @@ LDREV := -X 'github.com/Noso-Project/noso-go/internal/miner.Commit=$(REVISION)'
 
 LDFLAGS := -ldflags "-s -w $(LDVER) $(LDREV)"
 
+.PHONY: patch
+patch: patch-$(APP)-windows-386 patch-$(APP)-windows-amd64
+
+.PHONY: patch-%
+patch-%:
+	@if test $(findstring windows,$(subst -, ,$*)); then \
+		echo "Patching icon into Windows binary: $*"; \
+		go-winres patch bin/$*; \
+	else \
+		echo "Wont patch icon into non-Windows binary: $*"; \
+	fi;
+
 .PHONY: all
-all: $(APP)-linux-amd64 $(APP)-linux-386 $(APP)-darwin-amd64 $(APP)-windows-386 $(APP)-windows-amd64 $(APP)-linux-arm $(APP)-linux-arm64
+all: $(BINARIES)
 
 .PHONY: $(APP)-%
 $(APP)-%: OS=$(word 3,$(subst -, ,$@))

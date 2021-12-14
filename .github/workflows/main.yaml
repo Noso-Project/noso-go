@@ -46,6 +46,11 @@ jobs:
       - name: Build ${{ matrix.binary }}
         run: make ${{ matrix.binary }}
 
+      - name: Patch ${{ matrix.binary }}
+        run: |
+          GO111MODULE=auto GOFLAGS=-mod=mod go install github.com/tc-hib/go-winres@latest
+          make patch-${{ matrix.binary }}
+
       - name: Compress ${{ matrix.binary }}
         uses: crazy-max/ghaction-upx@v1
         with:
