@@ -1,9 +1,11 @@
 package common
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -13,6 +15,8 @@ const (
 	DUMMYADDR = "fakeurl.com"
 	DUMMYPORT = 12345
 )
+
+type Done chan struct{}
 
 func NewTcpServer(t *testing.T) *TcpServer {
 	svr := new(TcpServer)
@@ -25,6 +29,7 @@ func NewTcpServer(t *testing.T) *TcpServer {
 
 	svr.listener = l
 	svr.addr = svr.listener.Addr().String()
+	svr.done = make(Done, 0)
 
 	host, port, err := net.SplitHostPort(svr.addr)
 
@@ -48,6 +53,7 @@ type TcpServer struct {
 	addr     string
 	host     string
 	port     int
+	done     Done
 	listener net.Listener
 }
 
@@ -63,6 +69,16 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 		if conn == nil {
 			err = errors.New("could not create connection")
 			break
+		}
+
+		scanner := bufio.NewScanner(conn)
+
+		for scanner.Scan() {
+			fmt.Println("Svr conn output: ", scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintln(os.Stderr, "error reading connection: ", err)
 		}
 
 	}
