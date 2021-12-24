@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -10,12 +11,23 @@ import (
 	"time"
 )
 
+const (
+	JoinTimeout = 5 * time.Second
+)
+
+var (
+	JoinTimeoutErr = errors.New("Timed out while attempting to join pool")
+)
+
 func NewClient(poolAddr string, poolPort int) (client *Client) {
+	// TODO: need to formalize done channels throughout
+	done := make(chan struct{}, 0)
 	client = &Client{
 		poolAddr:   net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
 		connected:  false,
 		joined:     false,
 		sendStream: make(chan string, 0),
+		broker:     NewBroker(done),
 	}
 
 	var wg sync.WaitGroup
@@ -33,9 +45,14 @@ type Client struct {
 	connected  bool
 	joined     bool
 	sendStream chan string
+	broker     *Broker
 }
 
 func (c *Client) Connect() (err error) {
+
+	joinStream := c.broker.Subscribe(JOINOK)
+	// TODO: enable and use unsubscribe
+	// defer c.broker.Unsubscribe(joinStream)
 
 	c.conn, err = net.Dial("tcp", c.poolAddr)
 	if err != nil {
@@ -47,11 +64,13 @@ func (c *Client) Connect() (err error) {
 
 	c.join()
 
-	fmt.Println("Sleeping")
-	time.Sleep(2 * time.Second)
+	select {
+	case <-joinStream:
+	case <-time.After(JoinTimeout):
+		return JoinTimeoutErr
+	}
 
-	// TODO: do this with sync.Cond broadcast maybe?
-	// c.joined = true
+	c.joined = true
 	return nil
 }
 
@@ -102,7 +121,7 @@ loop:
 			fmt.Println("Received an unknown response: ", resp)
 		}
 		fmt.Println("Parsed msg: ", msg)
-		// c.broker.Publish(msg)
+		c.broker.Publish(msg)
 	}
 
 	if err := scanner.Err(); err != nil {

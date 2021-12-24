@@ -102,24 +102,27 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-// func TestConnect(t *testing.T) {
-// 	svr := NewTcpServer(t)
-// 	defer svr.Close()
+func TestConnect(t *testing.T) {
+	svr := NewTcpServer(t)
+	defer svr.Close()
 
-// 	client := NewClient(svr.host, svr.port)
-// 	client.Connect()
+	client := NewClient(svr.host, svr.port)
+	err := client.Connect()
+	if err != nil {
+		t.Fatal("Got an error and didn't expect one: ", err)
+	}
 
-// 	got := client.connected
-// 	want := true
+	got := client.connected
+	want := true
 
-// 	if got != want {
-// 		t.Errorf("client.connected: got %t, wanted %t", got, want)
-// 	}
+	if got != want {
+		t.Errorf("client.connected: got %t, wanted %t", got, want)
+	}
 
-// 	got = client.joined
-// 	want = true
+	got = client.joined
+	want = true
 
-// 	if got != want {
-// 		t.Errorf("client.joined: got %t, want %t", got, want)
-// 	}
-// }
+	if got != want {
+		t.Errorf("client.joined: got %t, want %t", got, want)
+	}
+}

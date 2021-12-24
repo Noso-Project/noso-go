@@ -39,6 +39,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 		case subStream := <-b.subStream:
 			b.subs[JOINOK] = append(b.subs[JOINOK], subStream)
 		case msg := <-b.pubStream:
+			fmt.Println("From pubStream: ", msg)
 			var msgType ServerMessageType
 			switch msg.(type) {
 			case joinOk:
@@ -46,6 +47,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			default:
 				// TODO: should log error here?
 				fmt.Printf("Unknown event type: %v\n", msg)
+				continue
 			}
 			for _, msgCh := range b.subs[msgType] {
 				msgCh <- msg
@@ -55,6 +57,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 }
 
 func (b *Broker) Publish(msg interface{}) {
+	fmt.Println("From Publish: ", msg)
 	b.pubStream <- msg
 }
 
