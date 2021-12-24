@@ -95,7 +95,14 @@ loop:
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
-		fmt.Println("Got this from the svr: ", scanner.Text())
+		resp := scanner.Text()
+		fmt.Println("Got this from the svr: ", resp)
+		msg, err := parse(resp)
+		if err != nil {
+			fmt.Println("Received an unknown response: ", resp)
+		}
+		fmt.Println("Parsed msg: ", msg)
+		// c.broker.Publish(msg)
 	}
 
 	if err := scanner.Err(); err != nil {
