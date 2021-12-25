@@ -19,33 +19,37 @@ var (
 	JoinTimeoutErr = errors.New("Timed out while attempting to join pool")
 )
 
-func NewClient(poolAddr string, poolPort int) (client *Client) {
+func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
-	done := make(chan struct{}, 0)
 	client = &Client{
+		done:       done,
 		poolAddr:   net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
 		connected:  false,
 		joined:     false,
 		sendStream: make(chan string, 0),
 		broker:     NewBroker(done),
+		mu:         new(sync.Mutex),
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go client.recv(&wg)
-	go client.send(&wg)
+	go client.recv(done, &wg)
+	go client.send(done, &wg)
 	wg.Wait()
 
 	return client
 }
 
 type Client struct {
+	// TODO: Evaluate using a context instead of done channel
+	done       chan struct{}
 	poolAddr   string
 	conn       net.Conn
 	connected  bool
 	joined     bool
 	sendStream chan string
 	broker     *Broker
+	mu         *sync.Mutex
 }
 
 func (c *Client) Connect() (err error) {
@@ -60,7 +64,9 @@ func (c *Client) Connect() (err error) {
 	}
 
 	// TODO: do this with sync.Cond broadcast maybe?
+	c.mu.Lock()
 	c.connected = true
+	c.mu.Unlock()
 
 	c.join()
 
@@ -82,32 +88,42 @@ func (c *Client) join() {
 func (c *Client) Send(msg string) {
 	go func(msg string) {
 		// TODO: Should I make this timeout? Or use a done chan?
-		c.sendStream <- msg
+		select {
+		case <-c.done:
+		case c.sendStream <- msg:
+		}
+
 	}(msg)
 }
 
-func (c *Client) send(wg *sync.WaitGroup) {
+func (c *Client) send(done chan struct{}, wg *sync.WaitGroup) {
 	wg.Done()
 	for {
 		select {
+		case <-done:
+			return
 		case msg := <-c.sendStream:
-			fmt.Println("Pulled from sendStream: ", msg)
+			// fmt.Println("Pulled from sendStream: ", msg)
 			fmt.Fprint(c.conn, msg+"\n")
 		}
 	}
 }
 
-func (c *Client) recv(wg *sync.WaitGroup) {
+func (c *Client) recv(done chan struct{}, wg *sync.WaitGroup) {
 	wg.Done()
 
 	// TODO: handle this with sync.Cond or similar
 loop:
 	for {
 		select {
+		case <-done:
+			return
 		case <-time.After(100 * time.Millisecond):
+			c.mu.Lock()
 			if c.connected {
 				break loop
 			}
+			c.mu.Unlock()
 		}
 	}
 
@@ -115,12 +131,12 @@ loop:
 
 	for scanner.Scan() {
 		resp := scanner.Text()
-		fmt.Println("Got this from the svr: ", resp)
+		// fmt.Println("Got this from the svr: ", resp)
 		msg, err := parse(resp)
 		if err != nil {
-			fmt.Println("Received an unknown response: ", resp)
+			// fmt.Println("Received an unknown response: ", resp)
 		}
-		fmt.Println("Parsed msg: ", msg)
+		// fmt.Println("Parsed msg: ", msg)
 		c.broker.Publish(msg)
 	}
 

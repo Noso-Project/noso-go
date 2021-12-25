@@ -61,6 +61,7 @@ type TcpServer struct {
 
 func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 	wg.Done()
+	// TODO: need to incorporate either a done channel or context
 	for {
 
 		conn, err := t.listener.Accept()
@@ -76,7 +77,7 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 		scanner := bufio.NewScanner(conn)
 
 		for scanner.Scan() {
-			fmt.Println("Svr conn output: ", scanner.Text())
+			// fmt.Println("Svr conn output: ", scanner.Text())
 			fmt.Fprintln(conn, "JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 020000000 PoolData 37873 E1151A4F79E6394F6897A913ADCD476B 11 0 102 0 -30 42270 3")
 		}
 
@@ -93,36 +94,37 @@ func (t *TcpServer) Close() (err error) {
 	return t.listener.Close()
 }
 
-func TestNewClient(t *testing.T) {
-	got := NewClient(DUMMYADDR, DUMMYPORT).poolAddr
-	want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
+func TestClient(t *testing.T) {
+	t.Run("new client", func(t *testing.T) {
+		got := NewClient(make(chan struct{}, 0), DUMMYADDR, DUMMYPORT).poolAddr
+		want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
 
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
+		if got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+	t.Run("connect", func(t *testing.T) {
+		svr := NewTcpServer(t)
+		defer svr.Close()
 
-func TestConnect(t *testing.T) {
-	svr := NewTcpServer(t)
-	defer svr.Close()
+		client := NewClient(make(chan struct{}, 0), svr.host, svr.port)
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
 
-	client := NewClient(svr.host, svr.port)
-	err := client.Connect()
-	if err != nil {
-		t.Fatal("Got an error and didn't expect one: ", err)
-	}
+		got := client.connected
+		want := true
 
-	got := client.connected
-	want := true
+		if got != want {
+			t.Errorf("client.connected: got %t, wanted %t", got, want)
+		}
 
-	if got != want {
-		t.Errorf("client.connected: got %t, wanted %t", got, want)
-	}
+		got = client.joined
+		want = true
 
-	got = client.joined
-	want = true
-
-	if got != want {
-		t.Errorf("client.joined: got %t, want %t", got, want)
-	}
+		if got != want {
+			t.Errorf("client.joined: got %t, want %t", got, want)
+		}
+	})
 }
