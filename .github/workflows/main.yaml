@@ -19,6 +19,9 @@ jobs:
         with:
           go-version: '1.16'
 
+      - name: Install richgo
+        run:  go install github.com/kyoh86/richgo@latest
+
       - name: Unit Test
         run: make unit-tests
 

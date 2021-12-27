@@ -92,8 +92,10 @@ package-%:
 .PHONY: unit-test
 unit-tests:
 ifeq (, $(shell which richgo))
+	go test -v ./.../common
 	go test -v ./.../miner
 else
+	richgo test -v ./.../common
 	richgo test -v ./.../miner
 endif
 
