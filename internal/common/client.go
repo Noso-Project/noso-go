@@ -27,6 +27,7 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 	client = &Client{
 		done:         done,
 		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
+		auth:         "password leviable5",
 		connected:    make(chan struct{}, 0),
 		joined:       make(chan struct{}, 0),
 		sendStream:   make(chan string, 0),
@@ -48,8 +49,10 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 
 type Client struct {
 	// TODO: Evaluate using a context instead of done channel
+	// TODO: Set auth
 	done       chan struct{}
 	poolAddr   string
+	auth       string // "poolPw walletAddr"
 	conn       net.Conn
 	connected  chan struct{}
 	joined     chan struct{}
@@ -74,6 +77,9 @@ func (c *Client) Connect() (err error) {
 
 	close(c.connected)
 
+	// TODO: Might need to explicitely separate connect and join,
+	//       as its possible a secondary client might want to connect,
+	//       to a pool but not join it until the primary fails
 	c.join()
 
 	select {
@@ -88,12 +94,12 @@ func (c *Client) Connect() (err error) {
 
 func (c *Client) join() {
 	// TODO: Need to use real values for vession and instanceId
-	c.Send("JOIN ng9.9.9 123456")
+	c.Send("JOIN ng9.9.9")
 }
 
 func (c *Client) Send(msg string) {
 	go func(msg string) {
-		// TODO: Should I make this timeout? Or use a done chan?
+		// TODO: Should I make this timeout? Or use a context deadline?
 		select {
 		case <-c.done:
 		case c.sendStream <- msg:
@@ -109,7 +115,8 @@ func (c *Client) send(done chan struct{}, wg *sync.WaitGroup) {
 		case <-done:
 			return
 		case msg := <-c.sendStream:
-			// fmt.Println("Pulled from sendStream: ", msg)
+			msg = c.auth + " " + msg
+			fmt.Println("Send: ", msg)
 			fmt.Fprintln(c.conn, msg)
 		}
 	}
@@ -128,7 +135,7 @@ func (c *Client) recv(done chan struct{}, wg *sync.WaitGroup) {
 
 	for scanner.Scan() {
 		resp := scanner.Text()
-		// fmt.Println("Got this from the svr: ", resp)
+		fmt.Println("Recv: ", resp)
 		msg, err := parse(resp)
 		if err != nil {
 			fmt.Println("Received an unknown response: ", resp)
@@ -158,7 +165,8 @@ func (c *Client) ping(done chan struct{}, wg *sync.WaitGroup) {
 		case <-done:
 			return
 		case <-ticker.C:
-			fmt.Fprintln(c.conn, "PING")
+			// TODO: Need to use real hash rate value here instead of zero
+			c.Send("PING 0")
 		}
 	}
 }

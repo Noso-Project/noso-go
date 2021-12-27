@@ -92,6 +92,8 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 		for scanner.Scan() {
 			req := scanner.Text()
 			// fmt.Println("Svr conn output: ", req)
+			// String auth prefix from command: "poolPw walletAddr Command"
+			req = strings.SplitN(req, " ", 3)[2]
 			reqType, err = getReqType(req)
 			if err != nil {
 				panic(err)
