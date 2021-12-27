@@ -8,6 +8,7 @@ const (
 	JOINOK_default     = "JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 020000000 PoolData 37873 E1151A4F79E6394F6897A913ADCD476B 11 0 102 0 -30 42270 3"
 	PONG_default       = "PONG PoolData 37892 C74B9ABA60E2EE1B52613959D4F06876 11 0 105 0 -29 86070 3"
 	PASSFAILED_default = "PASSFAILED"
+	POOLSTEPS_default  = "POOLSTEPS PoolData 38441 AD23A982B87D193E8384EB50C3F0B50C 11 0 106 0 -23 43328 3"
 )
 
 func TestParse(t *testing.T) {
@@ -76,6 +77,30 @@ func TestParse(t *testing.T) {
 		assertMsgAttrs(t, resp.(pong).blocksTillPayment, -29)
 		assertMsgAttrs(t, resp.(pong).poolHashrate, 86070)
 		assertMsgAttrs(t, resp.(pong).poolDepth, 3)
+	})
+	t.Run("poolSteps", func(t *testing.T) {
+		resp, err := parse(POOLSTEPS_default)
+
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err.Error())
+		}
+
+		got := resp.GetMsgType()
+		want := POOLSTEPS
+
+		if got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+
+		assertMsgAttrs(t, resp.(poolSteps).block, 38441)
+		assertMsgAttrs(t, resp.(poolSteps).targetHash, "AD23A982B87D193E8384EB50C3F0B50C")
+		assertMsgAttrs(t, resp.(poolSteps).targetLen, 11)
+		assertMsgAttrs(t, resp.(poolSteps).currentStep, 0)
+		assertMsgAttrs(t, resp.(poolSteps).difficulty, 106)
+		assertMsgAttrs(t, resp.(poolSteps).poolBalance, "0")
+		assertMsgAttrs(t, resp.(poolSteps).blocksTillPayment, -23)
+		assertMsgAttrs(t, resp.(poolSteps).poolHashrate, 43328)
+		assertMsgAttrs(t, resp.(poolSteps).poolDepth, 3)
 	})
 }
 

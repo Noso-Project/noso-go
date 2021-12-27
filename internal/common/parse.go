@@ -23,6 +23,8 @@ func parse(msg string) (ServerMessage, error) {
 		return newPong(splitMsg), nil
 	case "PASSFAILED":
 		return newPassFailed(splitMsg), nil
+	case "POOLSTEPS":
+		return newPoolSteps(splitMsg), nil
 	default:
 		return serverMessage{}, UnknownRespErr
 	}

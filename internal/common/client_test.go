@@ -120,4 +120,28 @@ func TestClient(t *testing.T) {
 			t.Errorf("Timed out waiting for server pong")
 		}
 	})
+	t.Run("poolsteps", func(t *testing.T) {
+		// Use ping to trigger a poolsteps resp
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+
+		svr.rMap[PING] = []string{POOLSTEPS_default}
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		poolStepsStream := client.broker.Subscribe(PoolStepsTopic)
+		defer close(poolStepsStream)
+
+		select {
+		case <-poolStepsStream:
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for server poolsteps")
+		}
+	})
 }

@@ -8,11 +8,31 @@ import (
 
 type ServerMessageType int
 
+func (s ServerMessageType) String() string {
+	switch s {
+	case JOIN:
+		return "JOIN"
+	case JOINOK:
+		return "JOINOK"
+	case PING:
+		return "PING"
+	case PONG:
+		return "PONG"
+	case POOLSTEPS:
+		return "POOLSTEPS"
+	case PASSFAILED:
+		return "PASSFAILED"
+	default:
+		return fmt.Sprintf("%d (cant find string)", int(s))
+	}
+}
+
 const (
 	JOIN ServerMessageType = iota + 1
 	JOINOK
 	PING
 	PONG
+	POOLSTEPS
 	PASSFAILED
 )
 
@@ -86,6 +106,43 @@ func newPong(msg []string) (message pong) {
 	// TODO: Handle strconv errors
 	message = pong{}
 	message.MsgType = PONG
+	block, _ := strconv.Atoi(msg[2])
+	message.block = block
+	message.targetHash = msg[3]
+	targetLen, _ := strconv.Atoi(msg[4])
+	message.targetLen = targetLen
+	step, _ := strconv.Atoi(msg[5])
+	message.currentStep = step
+	diff, _ := strconv.Atoi(msg[6])
+	message.difficulty = diff
+	message.poolBalance = msg[7]
+	blocksTill, _ := strconv.Atoi(msg[8])
+	message.blocksTillPayment = blocksTill
+	poolHR, _ := strconv.Atoi(msg[9])
+	message.poolHashrate = poolHR
+	depth, _ := strconv.Atoi(msg[10])
+	message.poolDepth = depth
+
+	return message
+}
+
+type poolSteps struct {
+	serverMessage
+	block             int
+	targetHash        string
+	targetLen         int
+	currentStep       int
+	difficulty        int
+	poolBalance       string
+	blocksTillPayment int
+	poolHashrate      int
+	poolDepth         int
+}
+
+func newPoolSteps(msg []string) (message poolSteps) {
+	// TODO: Handle strconv errors
+	message = poolSteps{}
+	message.MsgType = POOLSTEPS
 	block, _ := strconv.Atoi(msg[2])
 	message.block = block
 	message.targetHash = msg[3]

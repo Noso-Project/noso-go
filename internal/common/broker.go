@@ -8,9 +8,26 @@ import (
 
 type Topic int
 
+func (t Topic) String() string {
+	switch t {
+	case JoinTopic:
+		return "JoinTopic"
+	case PingPongTopic:
+		return "PingPongTopic"
+	case PoolStepsTopic:
+		return "PoolDataTopic"
+	case PoolDataTopic:
+		return "PoolDataTopic"
+	default:
+		return fmt.Sprintf("%d (cant find string)", int(t))
+	}
+}
+
 const (
 	JoinTopic Topic = iota + 1
 	PingPongTopic
+	PoolStepsTopic
+	PoolDataTopic
 )
 
 var (
@@ -79,36 +96,39 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			}
 			close(unsubStream)
 		case msg := <-b.pubStream:
-			var topic Topic
-			var err error
-			topic, err = findTopic(msg)
+			// TODO: Need to groom out dead subscriptions?
+			topics, err := findTopics(msg)
 			if err != nil {
 				// TODO: Better way to do this
-				fmt.Println("Could not correlate server response to a topic: ", topic, err)
+				fmt.Println("Could not correlate server response to a topic: ", topics, err)
 			}
 
-			for _, stream := range b.subs[topic] {
-				// fmt.Println("Publishing: ", msg)
-				stream <- msg
+			for _, topic := range topics {
+				for _, stream := range b.subs[topic] {
+					// fmt.Printf("Publishing %v to topic %v\n", msg, topic)
+					stream <- msg
+				}
 			}
 		}
 	}
 }
 
-func findTopic(msg interface{}) (Topic, error) {
+func findTopics(msg interface{}) ([]Topic, error) {
 	switch msg.(type) {
 	case joinOk:
-		return JoinTopic, nil
+		return []Topic{JoinTopic, PoolDataTopic}, nil
 	case passFailed:
-		return JoinTopic, nil
+		return []Topic{JoinTopic}, nil
 	case pong:
-		return PingPongTopic, nil
+		return []Topic{PingPongTopic, PoolDataTopic}, nil
+	case poolSteps:
+		return []Topic{PoolStepsTopic, PoolDataTopic}, nil
 	default:
 		// TODO: Rethink how I'm doing this
 		fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-		fmt.Println("Unknown message type: ", msg)
+		fmt.Printf("Unknown message type: %s\n", msg)
 		fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-		return 0, UnknownMessageTypeErr
+		return []Topic{}, UnknownMessageTypeErr
 	}
 }
 
