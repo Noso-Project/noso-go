@@ -1,16 +1,10 @@
 package common
 
-// foo
-
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"net"
-	"os"
-	"strconv"
-	"sync"
+	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -18,96 +12,76 @@ const (
 	DUMMYPORT = 12345
 )
 
-type Done chan struct{}
+func getClientSvr(t *testing.T) (*Client, *TcpServer, chan struct{}) {
+	done := make(chan struct{}, 0)
+	r := make(respMap)
+	svr := NewTcpServer(done, t, r)
+	client := NewClient(done, svr.Host, svr.Port)
 
-func NewTcpServer(t *testing.T) *TcpServer {
-	svr := new(TcpServer)
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-
-	if err != nil {
-		t.Fatalf("Caught an error and didn't expect one: %v", err)
-	}
-
-	svr.listener = l
-	svr.addr = svr.listener.Addr().String()
-	svr.done = make(Done, 0)
-
-	host, port, err := net.SplitHostPort(svr.addr)
-
-	if err != nil {
-		t.Fatalf("Caught an error and didn't expect one: %v", err)
-	}
-
-	svr.host = host
-	svr.port, _ = strconv.Atoi(port)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go svr.Start(&wg)
-
-	wg.Wait()
-
-	return svr
-}
-
-type TcpServer struct {
-	addr     string
-	host     string
-	port     int
-	done     Done
-	listener net.Listener
-}
-
-func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
-	wg.Done()
-	// TODO: need to incorporate either a done channel or context
-	for {
-
-		conn, err := t.listener.Accept()
-		if err != nil {
-			err = errors.New("could not accept connection")
-			break
-		}
-		if conn == nil {
-			err = errors.New("could not create connection")
-			break
-		}
-
-		scanner := bufio.NewScanner(conn)
-
-		for scanner.Scan() {
-			// fmt.Println("Svr conn output: ", scanner.Text())
-			fmt.Fprintln(conn, "JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 020000000 PoolData 37873 E1151A4F79E6394F6897A913ADCD476B 11 0 102 0 -30 42270 3")
-		}
-
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintln(os.Stderr, "error reading connection: ", err)
-		}
-
-	}
-
-	return
-}
-
-func (t *TcpServer) Close() (err error) {
-	return t.listener.Close()
+	return client, svr, done
 }
 
 func TestClient(t *testing.T) {
 	t.Run("new client", func(t *testing.T) {
-		got := NewClient(make(chan struct{}, 0), DUMMYADDR, DUMMYPORT).poolAddr
+		done := make(chan struct{}, 0)
+		defer close(done)
+		got := NewClient(done, DUMMYADDR, DUMMYPORT).poolAddr
 		want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
 
 		if got != want {
 			t.Errorf("got %v, want %v", got, want)
 		}
 	})
-	t.Run("connect", func(t *testing.T) {
-		svr := NewTcpServer(t)
-		defer svr.Close()
+	t.Run("connect refused", func(t *testing.T) {
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+		svr.Close()
 
-		client := NewClient(make(chan struct{}, 0), svr.host, svr.port)
+		err := client.Connect()
+		if err == nil {
+			t.Fatal("Expected an error but didn't get one")
+		}
+
+		if !strings.Contains(err.Error(), "connection refused") {
+			t.Errorf("Expected 'connection refused' err, but got %s", err.Error())
+		}
+
+		got := client.connected
+		want := false
+
+		if got != want {
+			t.Errorf("client.connected: got %t, wanted %t", got, want)
+		}
+	})
+	t.Run("connect timeout", func(t *testing.T) {
+		oldTimeout := ConnectTimeout
+		ConnectTimeout = 1 * time.Nanosecond
+		defer func() { ConnectTimeout = oldTimeout }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+		svr.Close()
+
+		err := client.Connect()
+		if err == nil {
+			t.Fatal("Expected an error but didn't get one")
+		}
+
+		if !strings.Contains(err.Error(), "i/o timeout") {
+			t.Errorf("Expected 'connection refused' err, but got %s", err.Error())
+		}
+
+		got := client.connected
+		want := false
+
+		if got != want {
+			t.Errorf("client.connected: got %t, wanted %t", got, want)
+		}
+	})
+	t.Run("connect/join successful", func(t *testing.T) {
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
 		err := client.Connect()
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one: ", err)
@@ -125,6 +99,47 @@ func TestClient(t *testing.T) {
 
 		if got != want {
 			t.Errorf("client.joined: got %t, want %t", got, want)
+		}
+	})
+	t.Run("join bad password", func(t *testing.T) {
+		client, svr, done := getClientSvr(t)
+		svr.rMap[JOIN] = []string{PASSFAILED_default}
+		defer close(done)
+
+		joinStream := client.broker.Subscribe(JoinTopic)
+		client.Connect()
+
+		select {
+		case got := <-joinStream:
+			switch got.(type) {
+			case passFailed:
+			default:
+				t.Errorf("got %v, want passFailed", got)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+	})
+	t.Run("ping", func(t *testing.T) {
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		pongStream := client.broker.Subscribe(PingPongTopic)
+		defer close(pongStream)
+
+		select {
+		case <-pongStream:
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for server pong")
 		}
 	})
 }

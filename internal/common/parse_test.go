@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	JOINOK_1 = "JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 020000000 PoolData 37873 E1151A4F79E6394F6897A913ADCD476B 11 0 102 0 -30 42270 3"
+	JOINOK_default     = "JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 020000000 PoolData 37873 E1151A4F79E6394F6897A913ADCD476B 11 0 102 0 -30 42270 3"
+	PONG_default       = "PONG PoolData 37892 C74B9ABA60E2EE1B52613959D4F06876 11 0 105 0 -29 86070 3"
+	PASSFAILED_default = "PASSFAILED"
 )
 
 func TestParse(t *testing.T) {
@@ -26,7 +28,7 @@ func TestParse(t *testing.T) {
 		}
 	})
 	t.Run("joinOk", func(t *testing.T) {
-		resp, err := parse(JOINOK_1)
+		resp, err := parse(JOINOK_default)
 
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one: ", err.Error())
@@ -50,6 +52,30 @@ func TestParse(t *testing.T) {
 		assertMsgAttrs(t, resp.(joinOk).blocksTillPayment, -30)
 		assertMsgAttrs(t, resp.(joinOk).poolHashrate, 42270)
 		assertMsgAttrs(t, resp.(joinOk).poolDepth, 3)
+	})
+	t.Run("pong", func(t *testing.T) {
+		resp, err := parse(PONG_default)
+
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err.Error())
+		}
+
+		got := resp.GetMsgType()
+		want := PONG
+
+		if got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+
+		assertMsgAttrs(t, resp.(pong).block, 37892)
+		assertMsgAttrs(t, resp.(pong).targetHash, "C74B9ABA60E2EE1B52613959D4F06876")
+		assertMsgAttrs(t, resp.(pong).targetLen, 11)
+		assertMsgAttrs(t, resp.(pong).currentStep, 0)
+		assertMsgAttrs(t, resp.(pong).difficulty, 105)
+		assertMsgAttrs(t, resp.(pong).poolBalance, "0")
+		assertMsgAttrs(t, resp.(pong).blocksTillPayment, -29)
+		assertMsgAttrs(t, resp.(pong).poolHashrate, 86070)
+		assertMsgAttrs(t, resp.(pong).poolDepth, 3)
 	})
 }
 

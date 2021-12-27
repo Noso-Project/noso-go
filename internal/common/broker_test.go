@@ -10,9 +10,9 @@ func TestBroker(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
 		done := make(chan struct{}, 0)
 		defer close(done)
-		event, _ := parse(JOINOK_1)
+		event, _ := parse(JOINOK_default)
 		broker := NewBroker(done)
-		subCh := broker.Subscribe(JOINOK)
+		subCh := broker.Subscribe(JoinTopic)
 		broker.Publish(event)
 
 		var got interface{}
@@ -40,8 +40,8 @@ func TestBroker(t *testing.T) {
 			t.Errorf("got %d, want %d", got, want)
 		}
 
-		subCh := broker.Subscribe(JOINOK)
-		event, _ := parse(JOINOK_1)
+		subCh := broker.Subscribe(JoinTopic)
+		event, _ := parse(JOINOK_default)
 		broker.Publish(event)
 		<-subCh
 
@@ -56,7 +56,7 @@ func TestBroker(t *testing.T) {
 		done := make(chan struct{}, 0)
 		defer close(done)
 		broker := NewBroker(done)
-		ch := broker.Subscribe(JOINOK)
+		ch := broker.Subscribe(JoinTopic)
 		broker.Unsubscribe(ch)
 
 		select {

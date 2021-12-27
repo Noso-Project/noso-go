@@ -19,6 +19,10 @@ func parse(msg string) (ServerMessage, error) {
 	switch splitMsg[0] {
 	case "JOINOK":
 		return newJoinOk(splitMsg), nil
+	case "PONG":
+		return newPong(splitMsg), nil
+	case "PASSFAILED":
+		return newPassFailed(splitMsg), nil
 	default:
 		return serverMessage{}, UnknownRespErr
 	}

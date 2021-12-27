@@ -11,30 +11,36 @@ import (
 	"time"
 )
 
-const (
-	JoinTimeout = 5 * time.Second
+var (
+	ConnectTimeout = 5 * time.Second
+	JoinTimeout    = 5 * time.Second
+	PingInterval   = 5 * time.Second
 )
 
 var (
 	JoinTimeoutErr = errors.New("Timed out while attempting to join pool")
+	PassFailedErr  = errors.New("Failed to join pool: wrong password")
 )
 
 func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
 	client = &Client{
-		done:       done,
-		poolAddr:   net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		connected:  false,
-		joined:     false,
-		sendStream: make(chan string, 0),
-		broker:     NewBroker(done),
-		mu:         new(sync.Mutex),
+		done:         done,
+		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
+		connected:    false,
+		joined:       false,
+		sendStream:   make(chan string, 0),
+		broker:       NewBroker(done),
+		mu:           new(sync.Mutex),
+		joinTimeout:  JoinTimeout,
+		pingInterval: PingInterval,
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go client.recv(done, &wg)
 	go client.send(done, &wg)
+	go client.ping(done, &wg)
 	wg.Wait()
 
 	return client
@@ -50,15 +56,18 @@ type Client struct {
 	sendStream chan string
 	broker     *Broker
 	mu         *sync.Mutex
+
+	// Timeouts/Intervals
+	joinTimeout  time.Duration
+	pingInterval time.Duration
 }
 
 func (c *Client) Connect() (err error) {
 
-	joinStream := c.broker.Subscribe(JOINOK)
-	// TODO: enable and use unsubscribe
-	// defer c.broker.Unsubscribe(joinStream)
+	joinStream := c.broker.Subscribe(JoinTopic)
+	defer c.broker.Unsubscribe(joinStream)
 
-	c.conn, err = net.Dial("tcp", c.poolAddr)
+	c.conn, err = net.DialTimeout("tcp", c.poolAddr, ConnectTimeout)
 	if err != nil {
 		return err
 	}
@@ -72,7 +81,7 @@ func (c *Client) Connect() (err error) {
 
 	select {
 	case <-joinStream:
-	case <-time.After(JoinTimeout):
+	case <-time.After(c.joinTimeout):
 		return JoinTimeoutErr
 	}
 
@@ -104,7 +113,7 @@ func (c *Client) send(done chan struct{}, wg *sync.WaitGroup) {
 			return
 		case msg := <-c.sendStream:
 			// fmt.Println("Pulled from sendStream: ", msg)
-			fmt.Fprint(c.conn, msg+"\n")
+			fmt.Fprintln(c.conn, msg)
 		}
 	}
 }
@@ -134,7 +143,7 @@ loop:
 		// fmt.Println("Got this from the svr: ", resp)
 		msg, err := parse(resp)
 		if err != nil {
-			// fmt.Println("Received an unknown response: ", resp)
+			fmt.Println("Received an unknown response: ", resp)
 		}
 		// fmt.Println("Parsed msg: ", msg)
 		c.broker.Publish(msg)
@@ -142,5 +151,26 @@ loop:
 
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
+	}
+}
+
+func (c *Client) ping(done chan struct{}, wg *sync.WaitGroup) {
+	joinStream := c.broker.Subscribe(JoinTopic)
+	wg.Done()
+	select {
+	case <-done:
+		return
+	case <-joinStream:
+		close(joinStream)
+	}
+
+	ticker := time.NewTicker(c.pingInterval)
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			fmt.Fprintln(c.conn, "PING")
+		}
 	}
 }
