@@ -27,8 +27,8 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 	client = &Client{
 		done:         done,
 		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		connected:    false,
-		joined:       false,
+		connected:    make(chan struct{}, 0),
+		joined:       make(chan struct{}, 0),
 		sendStream:   make(chan string, 0),
 		broker:       NewBroker(done),
 		mu:           new(sync.Mutex),
@@ -51,8 +51,8 @@ type Client struct {
 	done       chan struct{}
 	poolAddr   string
 	conn       net.Conn
-	connected  bool
-	joined     bool
+	connected  chan struct{}
+	joined     chan struct{}
 	sendStream chan string
 	broker     *Broker
 	mu         *sync.Mutex
@@ -72,10 +72,7 @@ func (c *Client) Connect() (err error) {
 		return err
 	}
 
-	// TODO: do this with sync.Cond broadcast maybe?
-	c.mu.Lock()
-	c.connected = true
-	c.mu.Unlock()
+	close(c.connected)
 
 	c.join()
 
@@ -85,7 +82,7 @@ func (c *Client) Connect() (err error) {
 		return JoinTimeoutErr
 	}
 
-	c.joined = true
+	close(c.joined)
 	return nil
 }
 
@@ -121,19 +118,10 @@ func (c *Client) send(done chan struct{}, wg *sync.WaitGroup) {
 func (c *Client) recv(done chan struct{}, wg *sync.WaitGroup) {
 	wg.Done()
 
-	// TODO: handle this with sync.Cond or similar
-loop:
-	for {
-		select {
-		case <-done:
-			return
-		case <-time.After(100 * time.Millisecond):
-			c.mu.Lock()
-			if c.connected {
-				break loop
-			}
-			c.mu.Unlock()
-		}
+	select {
+	case <-c.connected:
+	case <-done:
+		return
 	}
 
 	scanner := bufio.NewScanner(c.conn)

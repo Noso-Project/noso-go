@@ -45,13 +45,6 @@ func TestClient(t *testing.T) {
 		if !strings.Contains(err.Error(), "connection refused") {
 			t.Errorf("Expected 'connection refused' err, but got %s", err.Error())
 		}
-
-		got := client.connected
-		want := false
-
-		if got != want {
-			t.Errorf("client.connected: got %t, wanted %t", got, want)
-		}
 	})
 	t.Run("connect timeout", func(t *testing.T) {
 		oldTimeout := ConnectTimeout
@@ -70,15 +63,8 @@ func TestClient(t *testing.T) {
 		if !strings.Contains(err.Error(), "i/o timeout") {
 			t.Errorf("Expected 'connection refused' err, but got %s", err.Error())
 		}
-
-		got := client.connected
-		want := false
-
-		if got != want {
-			t.Errorf("client.connected: got %t, wanted %t", got, want)
-		}
 	})
-	t.Run("connect/join successful", func(t *testing.T) {
+	t.Run("connect-join successful", func(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
@@ -87,18 +73,10 @@ func TestClient(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		got := client.connected
-		want := true
-
-		if got != want {
-			t.Errorf("client.connected: got %t, wanted %t", got, want)
-		}
-
-		got = client.joined
-		want = true
-
-		if got != want {
-			t.Errorf("client.joined: got %t, want %t", got, want)
+		select {
+		case <-client.joined:
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("client timeout out trying to join")
 		}
 	})
 	t.Run("join bad password", func(t *testing.T) {
