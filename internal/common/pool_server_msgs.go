@@ -22,6 +22,8 @@ func (s ServerMessageType) String() string {
 		return "POOLSTEPS"
 	case PASSFAILED:
 		return "PASSFAILED"
+	case STEPOK:
+		return "STEPOK"
 	default:
 		return fmt.Sprintf("%d (cant find string)", int(s))
 	}
@@ -34,6 +36,7 @@ const (
 	PONG
 	POOLSTEPS
 	PASSFAILED
+	STEPOK
 )
 
 type ServerMessage interface {
@@ -171,6 +174,21 @@ func newPassFailed(msg []string) (message passFailed) {
 	// TODO: Handle strconv errors
 	message = passFailed{}
 	message.MsgType = PASSFAILED
+
+	return message
+}
+
+type stepOk struct {
+	serverMessage
+	PopValue int
+}
+
+func newStepOk(msg []string) (message stepOk) {
+	// TODO: Handle strconv errors
+	message = stepOk{}
+	message.MsgType = STEPOK
+	popValue, _ := strconv.Atoi(msg[1])
+	message.PopValue = popValue
 
 	return message
 }

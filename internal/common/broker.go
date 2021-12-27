@@ -18,6 +18,8 @@ func (t Topic) String() string {
 		return "PoolDataTopic"
 	case PoolDataTopic:
 		return "PoolDataTopic"
+	case StepOkTopic:
+		return "StepOkTopic"
 	default:
 		return fmt.Sprintf("%d (cant find string)", int(t))
 	}
@@ -28,6 +30,7 @@ const (
 	PingPongTopic
 	PoolStepsTopic
 	PoolDataTopic
+	StepOkTopic
 )
 
 var (
@@ -124,6 +127,8 @@ func findTopics(msg interface{}) ([]Topic, error) {
 		return []Topic{PingPongTopic, PoolDataTopic}, nil
 	case poolSteps:
 		return []Topic{PoolStepsTopic, PoolDataTopic}, nil
+	case stepOk:
+		return []Topic{StepOkTopic}, nil
 	default:
 		// TODO: Rethink how I'm doing this
 		fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")

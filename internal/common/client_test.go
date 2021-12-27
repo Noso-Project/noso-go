@@ -64,7 +64,22 @@ func TestClient(t *testing.T) {
 			t.Errorf("Expected 'connection refused' err, but got %s", err.Error())
 		}
 	})
-	t.Run("connect-join successful", func(t *testing.T) {
+	t.Run("connect successful", func(t *testing.T) {
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		select {
+		case <-client.connected:
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("client timeout out trying to connect")
+		}
+	})
+	t.Run("join successful", func(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
@@ -98,7 +113,7 @@ func TestClient(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 	})
-	t.Run("ping", func(t *testing.T) {
+	t.Run("ping and pong", func(t *testing.T) {
 		oldPing := PingInterval
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
@@ -233,6 +248,41 @@ func TestClient(t *testing.T) {
 			case <-after:
 				t.Fatal("Timed out waiting for pooldata in poolSteps msg")
 			}
+		}
+	})
+	t.Run("stepok", func(t *testing.T) {
+		// Use ping to trigger a stepok resp
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+
+		svr.rMap[PING] = []string{STEPOK_default}
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		stepOkStream := client.broker.Subscribe(StepOkTopic)
+		defer close(stepOkStream)
+
+		select {
+		case resp := <-stepOkStream:
+			switch resp.(type) {
+			case stepOk:
+				got := resp.(stepOk).PopValue
+				want := 256
+
+				if got != want {
+					t.Errorf("got %d, want %d", got, want)
+				}
+			default:
+				t.Errorf("Expected stepOk msg, but got %v", resp)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for server StepOk")
 		}
 	})
 }

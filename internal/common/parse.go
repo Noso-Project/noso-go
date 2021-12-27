@@ -25,6 +25,8 @@ func parse(msg string) (ServerMessage, error) {
 		return newPassFailed(splitMsg), nil
 	case "POOLSTEPS":
 		return newPoolSteps(splitMsg), nil
+	case "STEPOK":
+		return newStepOk(splitMsg), nil
 	default:
 		return serverMessage{}, UnknownRespErr
 	}

@@ -9,6 +9,7 @@ const (
 	PONG_default       = "PONG PoolData 37892 C74B9ABA60E2EE1B52613959D4F06876 11 0 105 0 -29 86070 3"
 	PASSFAILED_default = "PASSFAILED"
 	POOLSTEPS_default  = "POOLSTEPS PoolData 38441 AD23A982B87D193E8384EB50C3F0B50C 11 0 106 0 -23 43328 3"
+	STEPOK_default     = "STEPOK 256"
 )
 
 func TestParse(t *testing.T) {
@@ -101,6 +102,22 @@ func TestParse(t *testing.T) {
 		assertMsgAttrs(t, resp.(poolSteps).blocksTillPayment, -23)
 		assertMsgAttrs(t, resp.(poolSteps).poolHashrate, 43328)
 		assertMsgAttrs(t, resp.(poolSteps).poolDepth, 3)
+	})
+	t.Run("stepOk", func(t *testing.T) {
+		resp, err := parse(STEPOK_default)
+
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err.Error())
+		}
+
+		got := resp.GetMsgType()
+		want := STEPOK
+
+		if got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+
+		assertMsgAttrs(t, resp.(stepOk).PopValue, 256)
 	})
 }
 
