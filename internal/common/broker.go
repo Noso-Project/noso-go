@@ -75,6 +75,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-b.done:
+			// TODO: should I close every sub channel?
 			return
 		case sub := <-b.subStream:
 			b.mu.Lock()

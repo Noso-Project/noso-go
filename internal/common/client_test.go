@@ -144,4 +144,95 @@ func TestClient(t *testing.T) {
 			t.Errorf("Timed out waiting for server poolsteps")
 		}
 	})
+	t.Run("pooldata from joinOk", func(t *testing.T) {
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
+		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		defer close(poolDataStream)
+
+	loop:
+		for {
+			select {
+			case msg := <-poolDataStream:
+				switch msg.(type) {
+				case joinOk:
+					break loop
+				default:
+					continue
+				}
+			case <-time.After(100 * time.Millisecond):
+				t.Fatal("Timed out waiting for pooldata in joinOk msg")
+			}
+		}
+	})
+	t.Run("pooldata from pong", func(t *testing.T) {
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
+		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		defer close(poolDataStream)
+		after := time.After(100 * time.Millisecond)
+	loop:
+		for {
+			select {
+			case msg := <-poolDataStream:
+				switch msg.(type) {
+				case pong:
+					break loop
+				default:
+					continue
+				}
+			case <-after:
+				t.Fatal("Timed out waiting for pooldata in pong msg")
+			}
+		}
+	})
+	t.Run("pooldata from poolSteps", func(t *testing.T) {
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+
+		svr.rMap[PING] = []string{POOLSTEPS_default}
+
+		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		defer close(poolDataStream)
+		after := time.After(100 * time.Millisecond)
+	loop:
+		for {
+			select {
+			case msg := <-poolDataStream:
+				switch msg.(type) {
+				case poolSteps:
+					break loop
+				default:
+					continue
+				}
+			case <-after:
+				t.Fatal("Timed out waiting for pooldata in poolSteps msg")
+			}
+		}
+	})
 }
