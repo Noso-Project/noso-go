@@ -96,11 +96,16 @@ endif
 
 .PHONY: unit-test
 unit-tests:
-	$(gotest) -v -race -cover ./...
+	$(gotest) -v -race -cover -timeout 10s ./...
 
 .PHONY: benchmark-%
 benchmark-%:
-	$(gotest) -run=XXX -bench "(?i)$*$$" -v -race  ./... -cpu=1,2
+	#  -run=XXX excludes unit tests
+	#  -bench "(?i)$*$$" is a regex match
+	#         (?i) makes it case insensitive
+	#         $* matches the % in benchmark-%
+	#         $$ is make's version of an escaped $
+	$(gotest) -run=XXX -bench "(?i)$*$$" -benchtime 5s -v -race  ./... -cpu=1,2
 
 .PHONY: clean
 clean:
