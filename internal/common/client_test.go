@@ -21,7 +21,7 @@ func getClientSvr(t *testing.T) (*Client, *TcpServer, chan struct{}) {
 	return client, svr, done
 }
 
-func TestClient(t *testing.T) {
+func TestClientConnect(t *testing.T) {
 	t.Run("new client", func(t *testing.T) {
 		done := make(chan struct{}, 0)
 		defer close(done)
@@ -74,7 +74,7 @@ func TestClient(t *testing.T) {
 		}
 
 		select {
-		case <-client.connected:
+		case <-client.Connected():
 		case <-time.After(100 * time.Millisecond):
 			t.Errorf("client timeout out trying to connect")
 		}
@@ -89,7 +89,7 @@ func TestClient(t *testing.T) {
 		}
 
 		select {
-		case <-client.joined:
+		case <-client.Joined():
 		case <-time.After(100 * time.Millisecond):
 			t.Errorf("client timeout out trying to join")
 		}
@@ -99,7 +99,7 @@ func TestClient(t *testing.T) {
 		svr.rMap[JOIN] = []string{PASSFAILED_default}
 		defer close(done)
 
-		joinStream := client.broker.Subscribe(JoinTopic)
+		joinStream := client.Subscribe(JoinTopic)
 		client.Connect()
 
 		select {
@@ -113,6 +113,58 @@ func TestClient(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 	})
+	t.Run("reconnect", func(t *testing.T) {
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+
+		svr.printConnErr = false
+
+		pingStream := client.Subscribe(PingPongTopic)
+		client.Connect()
+
+		// Get one pong, close the svr conn, then
+		// wait for one more pong
+
+		select {
+		case <-pingStream:
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+
+		client.Unsubscribe(pingStream)
+
+		svr.conn.Close()
+
+		// Wait for connect
+		select {
+		case <-client.Connected():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to connect to pool")
+		}
+
+		// Wait for join
+		select {
+		case <-client.Joined():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to rejoin pool")
+		}
+
+		pingStream = client.Subscribe(PingPongTopic)
+
+		fmt.Println("Subscribed")
+
+		select {
+		case <-pingStream:
+		case <-time.After(200 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+	})
+}
+func TestClientMessaging(t *testing.T) {
 	t.Run("ping and pong", func(t *testing.T) {
 		oldPing := PingInterval
 		PingInterval = 10 * time.Millisecond
@@ -126,7 +178,7 @@ func TestClient(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		pongStream := client.broker.Subscribe(PingPongTopic)
+		pongStream := client.Subscribe(PingPongTopic)
 		defer close(pongStream)
 
 		select {
@@ -150,7 +202,7 @@ func TestClient(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		poolStepsStream := client.broker.Subscribe(PoolStepsTopic)
+		poolStepsStream := client.Subscribe(PoolStepsTopic)
 		defer close(poolStepsStream)
 
 		select {
@@ -163,7 +215,7 @@ func TestClient(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
-		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		poolDataStream := client.Subscribe(PoolDataTopic)
 		err := client.Connect()
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one: ", err)
@@ -194,7 +246,7 @@ func TestClient(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
-		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		poolDataStream := client.Subscribe(PoolDataTopic)
 		err := client.Connect()
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one: ", err)
@@ -227,7 +279,7 @@ func TestClient(t *testing.T) {
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
 
-		poolDataStream := client.broker.Subscribe(PoolDataTopic)
+		poolDataStream := client.Subscribe(PoolDataTopic)
 		err := client.Connect()
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one: ", err)
@@ -265,7 +317,7 @@ func TestClient(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		stepOkStream := client.broker.Subscribe(StepOkTopic)
+		stepOkStream := client.Subscribe(StepOkTopic)
 		defer close(stepOkStream)
 
 		select {

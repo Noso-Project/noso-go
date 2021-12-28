@@ -73,6 +73,7 @@ func removeIndex(s []chan interface{}, index int) []chan interface{} {
 	return append(s[:index], s[index+1:]...)
 }
 
+// TODO: Need to add a stop method
 func (b *Broker) start(wg *sync.WaitGroup) {
 	wg.Done()
 	for {
@@ -106,12 +107,22 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				// TODO: Better way to do this
 				fmt.Println("Could not correlate server response to a topic: ", topics, err)
 			}
+			// fmt.Println("00000000000000000000000000")
+			// fmt.Printf("Topics are: %v\n", topics)
+			// fmt.Println("00000000000000000000000000")
 
 			for _, topic := range topics {
+				b.mu.Lock()
+				// fmt.Println("00000000000000000000000000")
+				// fmt.Printf("Streams are: %v\n", b.subs[topic])
+				// fmt.Println("00000000000000000000000000")
 				for _, stream := range b.subs[topic] {
 					// fmt.Printf("Publishing %v to topic %v\n", msg, topic)
+					// TODO: Possible the listener is dead/gone, need to timeout?
+					//       Or possibly use buffered channel with timeout?
 					stream <- msg
 				}
+				b.mu.Unlock()
 			}
 		}
 	}

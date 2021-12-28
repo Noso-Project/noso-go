@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -24,25 +25,21 @@ var (
 
 func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
+	// TODO: need to pass in poolPassword and walletAddress
 	client = &Client{
 		done:         done,
 		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
 		auth:         "password leviable5",
-		connected:    make(chan struct{}, 0),
-		joined:       make(chan struct{}, 0),
-		sendStream:   make(chan string, 0),
-		broker:       NewBroker(done),
 		mu:           new(sync.Mutex),
+		sendStream:   make(chan string, 0),
 		joinTimeout:  JoinTimeout,
 		pingInterval: PingInterval,
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(3)
-	go client.recv(done, &wg)
-	go client.send(done, &wg)
-	go client.ping(done, &wg)
-	wg.Wait()
+	started := make(chan struct{}, 0)
+	go client.start(started)
+
+	<-started
 
 	return client
 }
@@ -63,6 +60,66 @@ type Client struct {
 	// Timeouts/Intervals
 	joinTimeout  time.Duration
 	pingInterval time.Duration
+}
+
+func (c *Client) init() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.connected = make(chan struct{}, 0)
+	c.joined = make(chan struct{}, 0)
+	c.broker = NewBroker(c.done)
+}
+
+func (c *Client) start(started chan struct{}) {
+	var wg sync.WaitGroup
+
+	for count := 0; ; count++ {
+		c.init()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		wg.Add(3)
+		go c.send(ctx, cancel, &wg)
+		go c.recv(ctx, cancel, &wg)
+		go c.ping(ctx, cancel, &wg)
+		wg.Wait()
+
+		if count > 0 {
+			c.Connect()
+		}
+
+		// TODO: Use a sync.Once here
+		select {
+		case <-started:
+		default:
+			close(started)
+		}
+
+		select {
+		case <-c.done:
+			cancel()
+			return
+		case <-ctx.Done():
+		}
+
+		cancel()
+
+		// TODO: Set configurable reconnect interval
+		// fmt.Println("Will reconnect in 5 seconds")
+		// time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func (c *Client) Connected() chan struct{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.connected
+}
+
+func (c *Client) Joined() chan struct{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.joined
 }
 
 func (c *Client) Connect() (err error) {
@@ -108,32 +165,49 @@ func (c *Client) Send(msg string) {
 	}(msg)
 }
 
-func (c *Client) send(done chan struct{}, wg *sync.WaitGroup) {
+// TODO: Really shouldn't use chan interface{} here
+func (c *Client) Subscribe(topic Topic) chan interface{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.broker.Subscribe(topic)
+}
+
+// TODO: Really shouldn't use chan interface{} here
+// TODO: Need to return an error here
+func (c *Client) Unsubscribe(unsubStream chan interface{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.broker.Unsubscribe(unsubStream)
+}
+
+func (c *Client) send(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
 	wg.Done()
 	for {
 		select {
-		case <-done:
+		case <-ctx.Done():
 			return
 		case msg := <-c.sendStream:
-			msg = c.auth + " " + msg
 			fmt.Println("Send: ", msg)
+			msg = c.auth + " " + msg
 			fmt.Fprintln(c.conn, msg)
 		}
 	}
 }
 
-func (c *Client) recv(done chan struct{}, wg *sync.WaitGroup) {
+func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
 	wg.Done()
 
 	select {
 	case <-c.connected:
-	case <-done:
+	case <-ctx.Done():
 		return
 	}
 
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
+		// This will cause scanner.Err() to throw an error
+		// c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 		resp := scanner.Text()
 		fmt.Println("Recv: ", resp)
 		msg, err := parse(resp)
@@ -147,13 +221,15 @@ func (c *Client) recv(done chan struct{}, wg *sync.WaitGroup) {
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
 	}
+
+	cancel()
 }
 
-func (c *Client) ping(done chan struct{}, wg *sync.WaitGroup) {
+func (c *Client) ping(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
 	joinStream := c.broker.Subscribe(JoinTopic)
 	wg.Done()
 	select {
-	case <-done:
+	case <-ctx.Done():
 		return
 	case <-joinStream:
 		close(joinStream)
@@ -162,7 +238,7 @@ func (c *Client) ping(done chan struct{}, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(c.pingInterval)
 	for {
 		select {
-		case <-done:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			// TODO: Need to use real hash rate value here instead of zero

@@ -11,6 +11,8 @@ jobs:
   unit-test:
     name: Unit tests
     runs-on: ubuntu-latest
+    env:
+      RICHGO_FORCE_COLOR: 1
     steps:
       - name: Checkout master
         uses: actions/checkout@master
@@ -23,7 +25,10 @@ jobs:
         run:  go install github.com/kyoh86/richgo@latest
 
       - name: Unit Test
-        run: make unit-tests
+        # run: make unit-tests
+        run: |
+          richgo test -v -race -timeout 10s ./.../common
+          richgo test -v -race -timeout 10s ./.../miner
 
   build:
     name: Build Binaries

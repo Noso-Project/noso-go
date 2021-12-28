@@ -24,6 +24,7 @@ var defaultRespMap = respMap{
 func NewTcpServer(done chan struct{}, t *testing.T, r respMap) *TcpServer {
 	svr := new(TcpServer)
 	svr.rMap = r
+	svr.printConnErr = true
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 
@@ -55,12 +56,14 @@ func NewTcpServer(done chan struct{}, t *testing.T, r respMap) *TcpServer {
 }
 
 type TcpServer struct {
-	addr     string
-	Host     string
-	Port     int
-	done     chan struct{}
-	listener net.Listener
-	rMap     respMap
+	addr         string
+	Host         string
+	Port         int
+	done         chan struct{}
+	listener     net.Listener
+	conn         net.Conn
+	rMap         respMap
+	printConnErr bool
 }
 
 func (t *TcpServer) stop() {
@@ -76,18 +79,17 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 	wg.Done()
 	// TODO: need to incorporate either a done channel or context
 	for {
-
-		conn, err := t.listener.Accept()
+		t.conn, err = t.listener.Accept()
 		if err != nil {
 			err = errors.New("could not accept connection")
 			break
 		}
-		if conn == nil {
+		if t.conn == nil {
 			err = errors.New("could not create connection")
 			break
 		}
 
-		scanner := bufio.NewScanner(conn)
+		scanner := bufio.NewScanner(t.conn)
 
 		for scanner.Scan() {
 			req := scanner.Text()
@@ -110,10 +112,10 @@ rMap: %v`
 					panic(fmt.Sprintf(pMsg, req, t.rMap))
 				}
 			}
-			fmt.Fprintln(conn, resp[0])
+			fmt.Fprintln(t.conn, resp[0])
 		}
 
-		if err := scanner.Err(); err != nil {
+		if err := scanner.Err(); err != nil && t.printConnErr {
 			fmt.Fprintln(os.Stderr, "error reading connection: ", err)
 		}
 
