@@ -207,7 +207,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 
 	for scanner.Scan() {
 		// This will cause scanner.Err() to throw an error
-		// c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		// c.conn.SetReadDeadline(time.Now().Add(15 * time.Second))
 		resp := scanner.Text()
 		// fmt.Println("Recv: ", resp)
 		msg, err := parse(resp)

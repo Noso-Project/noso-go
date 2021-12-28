@@ -113,7 +113,7 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 	})
-	t.Run("reconnect", func(t *testing.T) {
+	t.Run("reconnect on closed connection", func(t *testing.T) {
 		oldPing := PingInterval
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
@@ -155,15 +155,62 @@ func TestClientConnect(t *testing.T) {
 
 		pingStream = client.Subscribe(PingPongTopic)
 
-		fmt.Println("Subscribed")
+		select {
+		case <-pingStream:
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+	})
+	t.Run("reconnect on read deadline exceeded", func(t *testing.T) {
+		oldPing := PingInterval
+		PingInterval = 10 * time.Millisecond
+		defer func() { PingInterval = oldPing }()
+
+		client, svr, done := getClientSvr(t)
+		defer close(done)
+
+		svr.printConnErr = false
+
+		pingStream := client.Subscribe(PingPongTopic)
+		client.Connect()
+
+		// Get one pong, close the svr conn, then
+		// wait for one more pong
 
 		select {
 		case <-pingStream:
-		case <-time.After(200 * time.Millisecond):
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+
+		client.Unsubscribe(pingStream)
+
+		svr.conn.Close()
+
+		// Wait for connect
+		select {
+		case <-client.Connected():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to connect to pool")
+		}
+
+		// Wait for join
+		select {
+		case <-client.Joined():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to rejoin pool")
+		}
+
+		pingStream = client.Subscribe(PingPongTopic)
+
+		select {
+		case <-pingStream:
+		case <-time.After(500 * time.Millisecond):
 			t.Fatal("Timed out waiting for server pong")
 		}
 	})
 }
+
 func TestClientMessaging(t *testing.T) {
 	t.Run("ping and pong", func(t *testing.T) {
 		oldPing := PingInterval
