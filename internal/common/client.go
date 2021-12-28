@@ -187,7 +187,7 @@ func (c *Client) send(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 		case <-ctx.Done():
 			return
 		case msg := <-c.sendStream:
-			fmt.Println("Send: ", msg)
+			// fmt.Println("Send: ", msg)
 			msg = c.auth + " " + msg
 			fmt.Fprintln(c.conn, msg)
 		}
@@ -209,7 +209,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 		// This will cause scanner.Err() to throw an error
 		// c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 		resp := scanner.Text()
-		fmt.Println("Recv: ", resp)
+		// fmt.Println("Recv: ", resp)
 		msg, err := parse(resp)
 		if err != nil {
 			fmt.Println("Received an unknown response: ", resp)

@@ -25,10 +25,28 @@ jobs:
         run:  go install github.com/kyoh86/richgo@latest
 
       - name: Unit Test
-        # run: make unit-tests
-        run: |
-          richgo test -v -race -timeout 10s ./.../common
-          richgo test -v -race -timeout 10s ./.../miner
+        run: make unit-tests
+  benchmark:
+    name: benchmark
+    runs-on: ubuntu-latest
+    env:
+      RICHGO_FORCE_COLOR: 1
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@master
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Install richgo
+        run:  go install github.com/kyoh86/richgo@latest
+
+      - name: benchmark Send
+        run: make benchmark-send
+
+      - name: benchmark Send (Parallel)
+        run: make benchmark-sendparallel
 
   build:
     name: Build Binaries

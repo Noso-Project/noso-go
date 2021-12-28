@@ -99,6 +99,9 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 					}
 				}
 			}
+			// fmt.Println("11111111111111111111111111")
+			// fmt.Printf("Closing stream: %v\n", unsubStream)
+			// fmt.Println("11111111111111111111111111")
 			close(unsubStream)
 		case msg := <-b.pubStream:
 			// TODO: Need to groom out dead subscriptions?
@@ -113,16 +116,20 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 
 			for _, topic := range topics {
 				b.mu.Lock()
+				subs := b.subs[topic][:]
+				b.mu.Unlock()
 				// fmt.Println("00000000000000000000000000")
 				// fmt.Printf("Streams are: %v\n", b.subs[topic])
 				// fmt.Println("00000000000000000000000000")
-				for _, stream := range b.subs[topic] {
+				for _, stream := range subs {
 					// fmt.Printf("Publishing %v to topic %v\n", msg, topic)
 					// TODO: Possible the listener is dead/gone, need to timeout?
 					//       Or possibly use buffered channel with timeout?
-					stream <- msg
+					select {
+					case <-b.done:
+					case stream <- msg:
+					}
 				}
-				b.mu.Unlock()
 			}
 		}
 	}

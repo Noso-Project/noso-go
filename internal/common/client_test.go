@@ -12,7 +12,7 @@ const (
 	DUMMYPORT = 12345
 )
 
-func getClientSvr(t *testing.T) (*Client, *TcpServer, chan struct{}) {
+func getClientSvr(t testing.TB) (*Client, *TcpServer, chan struct{}) {
 	done := make(chan struct{}, 0)
 	r := make(respMap)
 	svr := NewTcpServer(done, t, r)
@@ -335,6 +335,54 @@ func TestClientMessaging(t *testing.T) {
 			}
 		case <-time.After(100 * time.Millisecond):
 			t.Errorf("Timed out waiting for server StepOk")
+		}
+	})
+}
+
+func BenchmarkSend(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	client, svr, done := getClientSvr(b)
+	defer close(done)
+	svr.printConnErr = false
+	pingStream := client.Subscribe(PingPongTopic)
+	poolDataStream := client.Subscribe(PoolDataTopic)
+	client.Connect()
+	var x int
+	for n := 0; n < b.N; n++ {
+		client.Send("PING 0")
+
+		for x = 0; x < 1; x++ {
+			select {
+			case <-pingStream:
+			case <-poolDataStream:
+			case <-time.After(100 * time.Millisecond):
+				fmt.Println("Failed (timeout)")
+				b.Error("Failed (timeout)")
+			}
+		}
+	}
+}
+
+func BenchmarkSendParallel(b *testing.B) {
+	client, svr, done := getClientSvr(b)
+	defer close(done)
+	svr.printConnErr = false
+	pingStream := client.Subscribe(PingPongTopic)
+	poolDataStream := client.Subscribe(PoolDataTopic)
+	client.Connect()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			client.Send("PING 0")
+
+			for x := 0; x < 1; x++ {
+				select {
+				case <-pingStream:
+				case <-poolDataStream:
+				case <-time.After(100 * time.Millisecond):
+					fmt.Println("Failed (timeout)")
+					b.Error("Failed (timeout)")
+				}
+			}
 		}
 	})
 }

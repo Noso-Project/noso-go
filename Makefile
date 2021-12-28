@@ -88,16 +88,19 @@ package-%:
 			;; \
 	esac
 
+ifeq (, $(shell which richgo))
+gotest := go test
+else
+gotest := richgo test
+endif
 
 .PHONY: unit-test
 unit-tests:
-ifeq (, $(shell which richgo))
-	go test -v ./.../common
-	go test -v ./.../miner
-else
-	richgo test -v ./.../common
-	richgo test -v ./.../miner
-endif
+	$(gotest) -v -race -cover ./...
+
+.PHONY: benchmark-%
+benchmark-%:
+	$(gotest) -run=XXX -bench "(?i)$*$$" -v -race  ./... -cpu=1,2
 
 .PHONY: clean
 clean:

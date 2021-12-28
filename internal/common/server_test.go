@@ -21,7 +21,7 @@ var defaultRespMap = respMap{
 	PING: []string{PONG_default},
 }
 
-func NewTcpServer(done chan struct{}, t *testing.T, r respMap) *TcpServer {
+func NewTcpServer(done chan struct{}, t testing.TB, r respMap) *TcpServer {
 	svr := new(TcpServer)
 	svr.rMap = r
 	svr.printConnErr = true
@@ -69,6 +69,7 @@ type TcpServer struct {
 func (t *TcpServer) stop() {
 	select {
 	case <-t.done:
+		// fmt.Println("CLOSING")
 		t.Close()
 	}
 	return
@@ -95,7 +96,12 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 			req := scanner.Text()
 			// fmt.Println("Svr conn output: ", req)
 			// String auth prefix from command: "poolPw walletAddr Command"
-			req = strings.SplitN(req, " ", 3)[2]
+			reqSplit := strings.SplitN(req, " ", 3)
+			if len(reqSplit) < 3 {
+				fmt.Println("wth is this? ", req)
+				continue
+			}
+			req = reqSplit[2]
 			reqType, err = getReqType(req)
 			if err != nil {
 				panic(err)
@@ -125,6 +131,7 @@ rMap: %v`
 }
 
 func (t *TcpServer) Close() (err error) {
+	// t.conn.Close()
 	return t.listener.Close()
 }
 
