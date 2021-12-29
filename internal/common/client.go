@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -29,7 +28,7 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 	client = &Client{
 		done:         done,
 		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		auth:         "password leviable5",
+		auth:         "password leviable4",
 		mu:           new(sync.Mutex),
 		sendStream:   make(chan string, 0),
 		joinTimeout:  JoinTimeout,
@@ -219,7 +218,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
+		// fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
 	}
 
 	cancel()

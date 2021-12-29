@@ -80,6 +80,7 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 	wg.Done()
 	// TODO: need to incorporate either a done channel or context
 	for {
+		// fmt.Println("Waiting for new connection")
 		t.conn, err = t.listener.Accept()
 		if err != nil {
 			err = errors.New("could not accept connection")
@@ -89,13 +90,14 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 			err = errors.New("could not create connection")
 			break
 		}
+		// fmt.Println("Got new connection")
 
 		scanner := bufio.NewScanner(t.conn)
 
 		for scanner.Scan() {
 			req := scanner.Text()
 			// fmt.Println("Svr conn output: ", req)
-			// String auth prefix from command: "poolPw walletAddr Command"
+			// Strip auth prefix from command: "poolPw walletAddr Command"
 			reqSplit := strings.SplitN(req, " ", 3)
 			if len(reqSplit) < 3 {
 				fmt.Println("wth is this? ", req)

@@ -82,8 +82,14 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			// TODO: should I close every sub channel?
 			return
 		case sub := <-b.subStream:
+			// fmt.Println("22222222222222222222222222")
+			// fmt.Printf("About to sub: topic %v channel %v\n", sub.topic, sub.subStream)
+			// fmt.Println("22222222222222222222222222")
 			b.mu.Lock()
 			b.subs[sub.topic] = append(b.subs[sub.topic], sub.subStream)
+			// fmt.Println("33333333333333333333333333")
+			// fmt.Printf("Topics subs now: %v\n", b.subs[sub.topic])
+			// fmt.Println("33333333333333333333333333")
 			b.mu.Unlock()
 		case unsubStream := <-b.unsubStream:
 			// subscriptions are always 1:1, never 1:many, so we can
@@ -119,7 +125,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				subs := b.subs[topic][:]
 				b.mu.Unlock()
 				// fmt.Println("00000000000000000000000000")
-				// fmt.Printf("Streams are: %v\n", b.subs[topic])
+				// fmt.Printf("Streams for topic %v are: %v\n", topic, b.subs[topic])
 				// fmt.Println("00000000000000000000000000")
 				for _, stream := range subs {
 					// fmt.Printf("Publishing %v to topic %v\n", msg, topic)
@@ -184,6 +190,9 @@ func (b *Broker) Unsubscribe(unsub chan interface{}) {
 }
 
 func (b *Broker) SubscriptionCount() int {
+	// TODO: Instead of returning value, requiring mutex locks,
+	//	     return channel, and have start goroutine return the
+	//		 current subscription count
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	subCount := 0
