@@ -256,7 +256,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 
 		pongStream := client.Subscribe(PingPongTopic)
-		defer close(pongStream)
+		defer client.Unsubscribe(pongStream)
 
 		select {
 		case <-pongStream:
@@ -280,7 +280,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 
 		poolStepsStream := client.Subscribe(PoolStepsTopic)
-		defer close(poolStepsStream)
+		defer client.Unsubscribe(poolStepsStream)
 
 		select {
 		case <-poolStepsStream:
@@ -298,7 +298,7 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		defer close(poolDataStream)
+		defer client.Unsubscribe(poolDataStream)
 
 	loop:
 		for {
@@ -329,7 +329,7 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		defer close(poolDataStream)
+		defer client.Unsubscribe(poolDataStream)
 		after := time.After(100 * time.Millisecond)
 	loop:
 		for {
@@ -362,7 +362,7 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		defer close(poolDataStream)
+		defer client.Unsubscribe(poolDataStream)
 		after := time.After(100 * time.Millisecond)
 	loop:
 		for {
@@ -395,7 +395,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 
 		stepOkStream := client.Subscribe(StepOkTopic)
-		defer close(stepOkStream)
+		defer client.Unsubscribe(stepOkStream)
 
 		select {
 		case resp := <-stepOkStream:

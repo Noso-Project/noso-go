@@ -43,7 +43,7 @@ type Broker struct {
 	done        chan struct{}
 	pubStream   chan interface{}
 	subStream   chan topicSubscription
-	unsubStream chan chan interface{}
+	unsubStream chan (<-chan interface{})
 	subs        map[Topic][]chan interface{}
 	subCount    int
 	mu          *sync.Mutex
@@ -54,7 +54,7 @@ func NewBroker(done chan struct{}) (b *Broker) {
 	b.done = done
 	b.pubStream = make(chan interface{}, 0)
 	b.subStream = make(chan topicSubscription, 0)
-	b.unsubStream = make(chan chan interface{}, 0)
+	b.unsubStream = make(chan (<-chan interface{}), 0)
 	b.subs = make(map[Topic][]chan interface{})
 	b.subs[JoinTopic] = make([]chan interface{}, 0)
 	b.subs[PingPongTopic] = make([]chan interface{}, 0)
@@ -79,7 +79,14 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-b.done:
-			// TODO: should I close every sub channel?
+			// Attempt to close every stream in subs
+			b.mu.Lock()
+			for _, v := range b.subs {
+				for _, stream := range v[:] {
+					close(stream)
+				}
+			}
+			b.mu.Unlock()
 			return
 		case sub := <-b.subStream:
 			// fmt.Println("22222222222222222222222222")
@@ -96,19 +103,19 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			// iterate through entire map to find our sub and delete
 			// it
 			// TODO: If we dont find a sub, return an error
+			b.mu.Lock()
 			for k, v := range b.subs {
-				for idx, ch := range v[:] {
-					if ch == unsubStream {
-						b.mu.Lock()
+				for idx, stream := range v[:] {
+					if stream == unsubStream {
 						b.subs[k] = removeIndex(b.subs[k], idx)
-						b.mu.Unlock()
+						// fmt.Println("11111111111111111111111111")
+						// fmt.Printf("Closing stream: %v\n", stream)
+						// fmt.Println("11111111111111111111111111")
+						close(stream)
 					}
 				}
 			}
-			// fmt.Println("11111111111111111111111111")
-			// fmt.Printf("Closing stream: %v\n", unsubStream)
-			// fmt.Println("11111111111111111111111111")
-			close(unsubStream)
+			b.mu.Unlock()
 		case msg := <-b.pubStream:
 			// TODO: Need to groom out dead subscriptions?
 			topics, err := findTopics(msg)
@@ -171,7 +178,7 @@ type topicSubscription struct {
 	subStream chan interface{}
 }
 
-func (b *Broker) Subscribe(topic Topic) chan interface{} {
+func (b *Broker) Subscribe(topic Topic) <-chan interface{} {
 	subStream := make(chan interface{}, 1)
 	t := topicSubscription{
 		topic:     topic,
@@ -182,7 +189,7 @@ func (b *Broker) Subscribe(topic Topic) chan interface{} {
 	return subStream
 }
 
-func (b *Broker) Unsubscribe(unsub chan interface{}) {
+func (b *Broker) Unsubscribe(unsub <-chan interface{}) {
 	// TODO: How can I notify the caller that this failed?
 	//       Maybe create and return an err channel, and pass
 	//       err channel to Start?

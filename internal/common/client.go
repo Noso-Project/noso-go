@@ -171,7 +171,7 @@ func (c *Client) Send(msg string) {
 }
 
 // TODO: Really shouldn't use chan interface{} here
-func (c *Client) Subscribe(topic Topic) chan interface{} {
+func (c *Client) Subscribe(topic Topic) <-chan interface{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.broker.Subscribe(topic)
@@ -179,7 +179,7 @@ func (c *Client) Subscribe(topic Topic) chan interface{} {
 
 // TODO: Really shouldn't use chan interface{} here
 // TODO: Need to return an error here
-func (c *Client) Unsubscribe(unsubStream chan interface{}) {
+func (c *Client) Unsubscribe(unsubStream <-chan interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.broker.Unsubscribe(unsubStream)
@@ -211,7 +211,6 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
-		// This will cause scanner.Err() to throw an error
 		c.conn.SetReadDeadline(time.Now().Add(DeadlineExceededTimeout))
 		resp := scanner.Text()
 		// fmt.Println("Recv: ", resp)
@@ -236,13 +235,13 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 }
 
 func (c *Client) ping(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
-	joinStream := c.broker.Subscribe(JoinTopic)
+	joinStream := c.Subscribe(JoinTopic)
 	wg.Done()
 	select {
 	case <-ctx.Done():
 		return
 	case <-joinStream:
-		close(joinStream)
+		c.Unsubscribe(joinStream)
 	}
 
 	ticker := time.NewTicker(c.pingInterval)
