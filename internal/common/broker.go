@@ -84,7 +84,6 @@ func (b *Broker) Done() <-chan struct{} {
 	return b.ctx.Done()
 }
 
-// TODO: Need to add a stop method
 func (b *Broker) start(wg *sync.WaitGroup) {
 	wg.Done()
 	for {
@@ -128,7 +127,6 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			}
 			b.mu.Unlock()
 		case msg := <-b.pubStream:
-			// TODO: Need to groom out dead subscriptions?
 			topics, err := findTopics(msg)
 			if err != nil {
 				// TODO: Better way to do this
@@ -223,8 +221,3 @@ func (b *Broker) SubscriptionCount() int {
 	}
 	return subCount
 }
-
-// TODO: Can probably delete this
-// type Subscription struct {
-// 	done chan struct{}
-// }

@@ -425,6 +425,37 @@ func TestClientMessaging(t *testing.T) {
 			t.Errorf("Timed out waiting for server StepOk")
 		}
 	})
+	t.Run("step", func(t *testing.T) {
+		client, _, done := getClientSvr(t)
+		defer close(done)
+
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		stepOkStream := client.Subscribe(StepOkTopic)
+		defer client.Unsubscribe(stepOkStream)
+
+		client.Send("STEP 35360 0e0000cyk 8b9554VKg 9")
+
+		select {
+		case resp := <-stepOkStream:
+			switch resp.(type) {
+			case stepOk:
+				got := resp.(stepOk).PopValue
+				want := 256
+
+				if got != want {
+					t.Errorf("got %d, want %d", got, want)
+				}
+			default:
+				t.Errorf("Expected stepOk msg, but got %v", resp)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for server StepOk")
+		}
+	})
 }
 
 func BenchmarkSend(b *testing.B) {

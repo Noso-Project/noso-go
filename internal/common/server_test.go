@@ -19,6 +19,7 @@ type (
 var defaultRespMap = respMap{
 	JOIN: []string{JOINOK_default},
 	PING: []string{PONG_default},
+	STEP: []string{STEPOK_default},
 }
 
 func NewTcpServer(done chan struct{}, t testing.TB, r respMap) *TcpServer {

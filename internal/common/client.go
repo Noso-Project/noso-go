@@ -76,6 +76,7 @@ func (c *Client) init() (context.Context, context.CancelFunc) {
 
 func (c *Client) start(started chan struct{}) {
 	var wg sync.WaitGroup
+	var once sync.Once
 
 	for count := 0; ; count++ {
 		ctx, cancel := c.init()
@@ -91,12 +92,7 @@ func (c *Client) start(started chan struct{}) {
 			c.Connect()
 		}
 
-		// TODO: Use a sync.Once here
-		select {
-		case <-started:
-		default:
-			close(started)
-		}
+		once.Do(func() { close(started) })
 
 		select {
 		case <-c.done:
@@ -161,6 +157,7 @@ func (c *Client) join() {
 	c.Send("JOIN ng9.9.9")
 }
 
+// TODO: Pass in Tx objects here instead of strings
 func (c *Client) Send(msg string) {
 	go func(msg string) {
 		// TODO: Should I make this timeout? Or use a context deadline?

@@ -22,6 +22,8 @@ func (s ServerMessageType) String() string {
 		return "POOLSTEPS"
 	case PASSFAILED:
 		return "PASSFAILED"
+	case STEP:
+		return "STEP"
 	case STEPOK:
 		return "STEPOK"
 	default:
@@ -36,6 +38,7 @@ const (
 	PONG
 	POOLSTEPS
 	PASSFAILED
+	STEP
 	STEPOK
 )
 
@@ -199,6 +202,8 @@ func stringToType(s string) (ServerMessageType, error) {
 		return JOIN, nil
 	case "PING":
 		return PING, nil
+	case "STEP":
+		return STEP, nil
 	default:
 		return -1, errors.New(fmt.Sprint("Unknown req command: ", s))
 	}
