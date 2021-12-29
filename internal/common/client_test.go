@@ -151,7 +151,6 @@ func TestClientConnect(t *testing.T) {
 		svr.conn.Close()
 
 		for oldConnectedChan == client.Connected() {
-			fmt.Println("Still the old chan")
 			time.Sleep(100 * time.Microsecond)
 		}
 
@@ -177,54 +176,69 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 	})
-	// t.Run("reconnect on read deadline exceeded", func(t *testing.T) {
-	// 	oldPing := PingInterval
-	// 	PingInterval = 10 * time.Millisecond
-	// 	defer func() { PingInterval = oldPing }()
+	t.Run("reconnect on read deadline exceeded", func(t *testing.T) {
+		oldDeadline := DeadlineExceededTimeout
+		DeadlineExceededTimeout = 10 * time.Millisecond
+		defer func() { DeadlineExceededTimeout = oldDeadline }()
 
-	// 	client, svr, done := getClientSvr(t)
-	// 	defer close(done)
+		client, svr, done := getClientSvr(t)
+		defer close(done)
 
-	// 	svr.printConnErr = false
+		svr.printConnErr = false
 
-	// 	pingStream := client.Subscribe(PingPongTopic)
-	// 	client.Connect()
+		pingStream := client.Subscribe(PingPongTopic)
+		client.Connect()
 
-	// 	// Get one pong, close the svr conn, then
-	// 	// wait for one more pong
+		// Get one pong, wait for deadline exceeded, then
+		// wait for one more pong
+		client.Send("PING 1")
 
-	// 	select {
-	// 	case <-pingStream:
-	// 	case <-time.After(100 * time.Millisecond):
-	// 		t.Fatal("Timed out waiting for server pong")
-	// 	}
+		select {
+		case <-pingStream:
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
 
-	// 	client.Unsubscribe(pingStream)
+		client.Unsubscribe(pingStream)
 
-	// 	svr.conn.Close()
+		// Subtle race condition here:
+		//  - After closing the connection, its possible that
+		//  - the Connected() and Joined() checks will work
+		//  - because they are the old, already closed channels,
+		//  - and then the Subscribe call goes to the old broker
+		//
+		// Need to wait for the client to re-init before checking
+		// its connected/joined status
 
-	// 	// Wait for connect
-	// 	select {
-	// 	case <-client.Connected():
-	// 	case <-time.After(100 * time.Millisecond):
-	// 		t.Fatal("Timed out waiting to connect to pool")
-	// 	}
+		oldConnectedChan := client.Connected()
 
-	// 	// Wait for join
-	// 	select {
-	// 	case <-client.Joined():
-	// 	case <-time.After(100 * time.Millisecond):
-	// 		t.Fatal("Timed out waiting to rejoin pool")
-	// 	}
+		for oldConnectedChan == client.Connected() {
+			time.Sleep(1 * time.Microsecond)
+		}
 
-	// 	pingStream = client.Subscribe(PingPongTopic)
+		// Wait for connect
+		select {
+		case <-client.Connected():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to connect to pool")
+		}
 
-	// 	select {
-	// 	case <-pingStream:
-	// 	case <-time.After(500 * time.Millisecond):
-	// 		t.Fatal("Timed out waiting for server pong")
-	// 	}
-	// })
+		// Wait for join
+		select {
+		case <-client.Joined():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to rejoin pool")
+		}
+
+		pingStream = client.Subscribe(PingPongTopic)
+		client.Send("PING 2")
+
+		select {
+		case <-pingStream:
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for server pong")
+		}
+	})
 }
 
 func TestClientMessaging(t *testing.T) {
@@ -494,7 +508,6 @@ func BenchmarkSendParallel(b *testing.B) {
 // 			svr.conn.Close()
 
 // 			for oldConnect == client.Connected() {
-// 				// b.Log("Still the old chan")
 // 				time.Sleep(100 * time.Microsecond)
 // 			}
 

@@ -15,7 +15,7 @@ const (
 func TestParse(t *testing.T) {
 	t.Run("empty resp", func(t *testing.T) {
 		_, got := parse("")
-		want := EmptyRespErr
+		want := ErrEmptyResp
 
 		if got != want {
 			t.Errorf("got %v, want %v", got, want)
@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 	})
 	t.Run("unknown resp", func(t *testing.T) {
 		_, got := parse("FOO BAR BAZ")
-		want := UnknownRespErr
+		want := ErrUnknownResp
 
 		if got != want {
 			t.Errorf("got %v, want %v", got, want)

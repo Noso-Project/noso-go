@@ -6,13 +6,13 @@ import (
 )
 
 var (
-	EmptyRespErr   = errors.New("Server sent an empty response")
-	UnknownRespErr = errors.New("Server sent an unknown response type")
+	ErrEmptyResp   = errors.New("Server sent an empty response")
+	ErrUnknownResp = errors.New("Server sent an unknown response type")
 )
 
 func parse(msg string) (ServerMessage, error) {
 	if len(msg) == 0 {
-		return serverMessage{}, EmptyRespErr
+		return serverMessage{}, ErrEmptyResp
 	}
 
 	splitMsg := strings.Split(msg, " ")
@@ -28,6 +28,6 @@ func parse(msg string) (ServerMessage, error) {
 	case "STEPOK":
 		return newStepOk(splitMsg), nil
 	default:
-		return serverMessage{}, UnknownRespErr
+		return serverMessage{}, ErrUnknownResp
 	}
 }

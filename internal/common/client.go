@@ -6,20 +6,22 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
 )
 
 var (
-	ConnectTimeout = 5 * time.Second
-	JoinTimeout    = 5 * time.Second
-	PingInterval   = 5 * time.Second
+	ConnectTimeout          = 5 * time.Second
+	DeadlineExceededTimeout = 15 * time.Second
+	JoinTimeout             = 5 * time.Second
+	PingInterval            = 5 * time.Second
 )
 
 var (
-	JoinTimeoutErr = errors.New("Timed out while attempting to join pool")
-	PassFailedErr  = errors.New("Failed to join pool: wrong password")
+	ErrJoinTimeout = errors.New("Timed out while attempting to join pool")
+	ErrPassFailed  = errors.New("Failed to join pool: wrong password")
 )
 
 func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
@@ -28,7 +30,7 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 	client = &Client{
 		done:         done,
 		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		auth:         "password leviable4",
+		auth:         "password leviable5",
 		mu:           new(sync.Mutex),
 		sendStream:   make(chan string, 0),
 		joinTimeout:  JoinTimeout,
@@ -126,6 +128,10 @@ func (c *Client) Connect() (err error) {
 	joinStream := c.broker.Subscribe(JoinTopic)
 	defer c.broker.Unsubscribe(joinStream)
 
+	if c.conn != nil {
+		c.conn.Close()
+	}
+
 	c.conn, err = net.DialTimeout("tcp", c.poolAddr, ConnectTimeout)
 	if err != nil {
 		return err
@@ -141,7 +147,7 @@ func (c *Client) Connect() (err error) {
 	select {
 	case <-joinStream:
 	case <-time.After(c.joinTimeout):
-		return JoinTimeoutErr
+		return ErrJoinTimeout
 	}
 
 	close(c.joined)
@@ -206,7 +212,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 
 	for scanner.Scan() {
 		// This will cause scanner.Err() to throw an error
-		// c.conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(DeadlineExceededTimeout))
 		resp := scanner.Text()
 		// fmt.Println("Recv: ", resp)
 		msg, err := parse(resp)
@@ -218,7 +224,12 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 	}
 
 	if err := scanner.Err(); err != nil {
-		// fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			// TODO: Need to log that the deadline was exceeded and a
+			//       reconnect attempt will happen
+		} else {
+			fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
+		}
 	}
 
 	cancel()

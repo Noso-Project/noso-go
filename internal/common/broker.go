@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	UnknownMessageTypeErr = errors.New("Could not correlate server response to topic")
+	ErrUnknownMessageType = errors.New("Could not correlate server response to topic")
 )
 
 // TODO: find a way to not use interface{} for the channel
@@ -158,7 +158,7 @@ func findTopics(msg interface{}) ([]Topic, error) {
 		fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 		fmt.Printf("Unknown message type: %s\n", msg)
 		fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-		return []Topic{}, UnknownMessageTypeErr
+		return []Topic{}, ErrUnknownMessageType
 	}
 }
 
