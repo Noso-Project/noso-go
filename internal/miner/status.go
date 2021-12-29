@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Noso-Project/noso-go/internal/common"
 )
 
 func GetPoolStatus(opts *Opts) {
@@ -87,7 +89,7 @@ func NewPoolStatus(s []string) PoolStatus {
 	)
 
 	hrRaw := s[0]
-	hr := formatHashRate(hrRaw + "000")
+	hr := common.FormatHashRate(hrRaw + "000")
 	feeRaw, err := strconv.Atoi(s[1])
 	if err != nil {
 		log.Println("Error converting Fee to int")
@@ -131,7 +133,7 @@ func newMinerInfo(m string) MinerInfo {
 	return MinerInfo{
 		Address:           address,
 		Balance:           balance,
-		BalanceHR:         formatBalance(balance),
+		BalanceHR:         common.FormatBalance(balance),
 		BlocksTillPayment: btp,
 	}
 }

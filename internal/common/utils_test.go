@@ -1,4 +1,4 @@
-package miner
+package common
 
 import "testing"
 
@@ -35,7 +35,7 @@ func TestHashFormatting(t *testing.T) {
 	}
 
 	for _, tt := range examples {
-		got := formatHashRate(tt.hashRate)
+		got := FormatHashRate(tt.hashRate)
 		if got != tt.want {
 			t.Errorf("got %s want %s", got, tt.want)
 		}
@@ -62,7 +62,7 @@ func TestBalanceFormatting(t *testing.T) {
 	}
 
 	for _, tt := range examples {
-		got := formatBalance(tt.balance)
+		got := FormatBalance(tt.balance)
 		if got != tt.want {
 			t.Errorf("got %s want %s", got, tt.want)
 		}

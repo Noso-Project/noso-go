@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/Noso-Project/noso-go/internal/common"
 )
 
 const CSVHEADER = "Transaction Time,Pool IP Address,Wallet Address,Request Or Response,Block,Payment Amount,Order Id\n"
@@ -21,7 +23,7 @@ func LogPaymentReq(poolIp string, wallet string, block int, amount string) {
 	)
 	now = time.Now()
 
-	amount = parseAmount(amount)
+	amount = common.ParseAmount(amount)
 
 	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Request", block, amount)
 
@@ -57,7 +59,7 @@ func LogPaymentResp(paymentMsg []string, poolIp string) {
 
 	now = time.Now()
 
-	amount = parseAmount(amount)
+	amount = common.ParseAmount(amount)
 
 	writeStr = fmt.Sprintf("%s,%s,%s,%s,%d,%s,%s\n", now.Format(time.RFC3339), poolIp, wallet, "Payment Response", block, amount, orderId)
 

@@ -1,4 +1,4 @@
-package miner
+package common
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 
 var orderOfMag = []string{"H", "Kh", "Mh", "Gh", "Th", "Ph", "Eh", "Zh"}
 
-func formatHashRate(hr string) string {
+func FormatHashRate(hr string) string {
 	var (
 		whole, frac string
 	)
@@ -35,11 +35,11 @@ func formatHashRate(hr string) string {
 	return fmt.Sprintf("%3s.%s %sash/s", whole, frac, mag)
 }
 
-func formatBalance(balance string) string {
-	return fmt.Sprintf("%s Noso", parseAmount(balance))
+func FormatBalance(balance string) string {
+	return fmt.Sprintf("%s Noso", ParseAmount(balance))
 }
 
-func parseAmount(amount string) string {
+func ParseAmount(amount string) string {
 	if strings.Contains(amount, ".") {
 		// Already formatted to X.YYY, do nothing
 		return amount

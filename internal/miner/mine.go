@@ -31,6 +31,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Noso-Project/noso-go/internal/common"
 )
 
 const (
@@ -154,9 +156,9 @@ func Mine(opts *Opts) {
 					statusMsg,
 					opts.CurrentWallet,
 					targetBlock,
-					formatHashRate(strconv.Itoa(hr)),
-					formatHashRate(poolHashRate),
-					formatBalance(bal),
+					common.FormatHashRate(strconv.Itoa(hr)),
+					common.FormatHashRate(poolHashRate),
+					common.FormatBalance(bal),
 					blocksTillPayment,
 					btpNote,
 					stepsSent,
