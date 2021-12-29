@@ -56,14 +56,10 @@ func TestBroker(t *testing.T) {
 		done := make(chan struct{}, 0)
 		defer close(done)
 		broker := NewBroker(done)
-		ch := broker.Subscribe(JoinTopic)
-		broker.Unsubscribe(ch)
+		stream := broker.Subscribe(JoinTopic)
+		broker.Unsubscribe(stream)
 
-		select {
-		case <-ch:
-		case <-time.After(100 * time.Millisecond):
-			t.Fatal("Failed to close unsubscribed channel")
-		}
+		assertRoStreamClosed(t, stream)
 
 		got := broker.SubscriptionCount()
 		want := 0
@@ -121,32 +117,21 @@ func TestBroker(t *testing.T) {
 
 		close(done)
 
-		// TODO: refactor to helper function? assertChanClosed?
-		select {
-		case got := <-pingStream:
-			if got != nil {
-				t.Fatalf("got %v, want nil", got)
-			}
-		case <-time.After(100 * time.Millisecond):
-			t.Fatal("Timed out waiting for pingStream to close")
-		}
-
-		select {
-		case got := <-joinStream:
-			if got != nil {
-				t.Fatalf("got %v, want nil", got)
-			}
-		case <-time.After(100 * time.Millisecond):
-			t.Fatal("Timed out waiting for joinStream to close")
-		}
-
-		select {
-		case got := <-poolDataStream:
-			if got != nil {
-				t.Fatalf("got %v, want nil", got)
-			}
-		case <-time.After(100 * time.Millisecond):
-			t.Fatal("Timed out waiting for poolDataStream to close")
-		}
+		assertRoStreamClosed(t, pingStream)
+		assertRoStreamClosed(t, joinStream)
+		assertRoStreamClosed(t, poolDataStream)
 	})
+}
+
+func assertRoStreamClosed(t *testing.T, stream <-chan interface{}) {
+	t.Helper()
+
+	select {
+	case got := <-stream:
+		if got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("Timed out waiting for %v to close", stream)
+	}
 }
