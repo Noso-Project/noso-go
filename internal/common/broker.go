@@ -1,9 +1,11 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type Topic int
@@ -34,24 +36,28 @@ const (
 )
 
 var (
+	PublishTimeout        = 1 * time.Second
 	ErrUnknownMessageType = errors.New("Could not correlate server response to topic")
 )
 
 // TODO: find a way to not use interface{} for the channel
 //       - Already boned on this once
 type Broker struct {
-	done        chan struct{}
-	pubStream   chan interface{}
-	subStream   chan topicSubscription
-	unsubStream chan (<-chan interface{})
-	subs        map[Topic][]chan interface{}
-	subCount    int
-	mu          *sync.Mutex
+	ctx            context.Context
+	cancel         context.CancelFunc
+	pubStream      chan interface{}
+	subStream      chan topicSubscription
+	unsubStream    chan (<-chan interface{})
+	subs           map[Topic][]chan interface{}
+	subCount       int
+	mu             *sync.Mutex
+	publishTimeout time.Duration
 }
 
-func NewBroker(done chan struct{}) (b *Broker) {
+func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 	b = new(Broker)
-	b.done = done
+	b.ctx = ctx
+	b.cancel = cancel
 	b.pubStream = make(chan interface{}, 0)
 	b.subStream = make(chan topicSubscription, 0)
 	b.unsubStream = make(chan (<-chan interface{}), 0)
@@ -60,6 +66,7 @@ func NewBroker(done chan struct{}) (b *Broker) {
 	b.subs[PingPongTopic] = make([]chan interface{}, 0)
 	b.subCount = 0
 	b.mu = new(sync.Mutex)
+	b.publishTimeout = PublishTimeout
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -73,12 +80,16 @@ func removeIndex(s []chan interface{}, index int) []chan interface{} {
 	return append(s[:index], s[index+1:]...)
 }
 
+func (b *Broker) Done() <-chan struct{} {
+	return b.ctx.Done()
+}
+
 // TODO: Need to add a stop method
 func (b *Broker) start(wg *sync.WaitGroup) {
 	wg.Done()
 	for {
 		select {
-		case <-b.done:
+		case <-b.ctx.Done():
 			// Attempt to close every stream in subs
 			b.mu.Lock()
 			for _, v := range b.subs {
@@ -127,6 +138,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 			// fmt.Printf("Topics are: %v\n", topics)
 			// fmt.Println("00000000000000000000000000")
 
+		loop:
 			for _, topic := range topics {
 				b.mu.Lock()
 				subs := b.subs[topic][:]
@@ -135,12 +147,15 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				// fmt.Printf("Streams for topic %v are: %v\n", topic, b.subs[topic])
 				// fmt.Println("00000000000000000000000000")
 				for _, stream := range subs {
-					// fmt.Printf("Publishing %v to topic %v\n", msg, topic)
-					// TODO: Possible the listener is dead/gone, need to timeout?
-					//       Or possibly use buffered channel with timeout?
+					// fmt.Printf("Publishing %v to %v stream for %v\n", msg, stream, topic)
 					select {
-					case <-b.done:
+					case <-b.ctx.Done():
 					case stream <- msg:
+					case <-time.After(b.publishTimeout):
+						// TODO: Need to log this as an error visible to user
+						fmt.Printf("Client broker is hung on write to %v stream for %s topic\n", stream, topic)
+						b.cancel()
+						break loop
 					}
 				}
 			}
@@ -179,7 +194,7 @@ type topicSubscription struct {
 }
 
 func (b *Broker) Subscribe(topic Topic) <-chan interface{} {
-	subStream := make(chan interface{}, 1)
+	subStream := make(chan interface{}, 0)
 	t := topicSubscription{
 		topic:     topic,
 		subStream: subStream,

@@ -63,20 +63,22 @@ type Client struct {
 	pingInterval time.Duration
 }
 
-func (c *Client) init() {
+func (c *Client) init() (context.Context, context.CancelFunc) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
 	c.connected = make(chan struct{}, 0)
 	c.joined = make(chan struct{}, 0)
-	c.broker = NewBroker(c.done)
+	c.broker = NewBroker(ctx, cancel)
+
+	return ctx, cancel
 }
 
 func (c *Client) start(started chan struct{}) {
 	var wg sync.WaitGroup
 
 	for count := 0; ; count++ {
-		c.init()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := c.init()
 		defer cancel()
 
 		wg.Add(3)
@@ -125,9 +127,6 @@ func (c *Client) Joined() chan struct{} {
 
 func (c *Client) Connect() (err error) {
 
-	joinStream := c.broker.Subscribe(JoinTopic)
-	defer c.broker.Unsubscribe(joinStream)
-
 	if c.conn != nil {
 		c.conn.Close()
 	}
@@ -138,6 +137,9 @@ func (c *Client) Connect() (err error) {
 	}
 
 	close(c.connected)
+
+	joinStream := c.Subscribe(JoinTopic)
+	defer c.Unsubscribe(joinStream)
 
 	// TODO: Might need to explicitely separate connect and join,
 	//       as its possible a secondary client might want to connect,
@@ -155,7 +157,7 @@ func (c *Client) Connect() (err error) {
 }
 
 func (c *Client) join() {
-	// TODO: Need to use real values for vession and instanceId
+	// TODO: Need to use real values for version and instanceId
 	c.Send("JOIN ng9.9.9")
 }
 
@@ -235,13 +237,11 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 }
 
 func (c *Client) ping(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
-	joinStream := c.Subscribe(JoinTopic)
 	wg.Done()
 	select {
 	case <-ctx.Done():
 		return
-	case <-joinStream:
-		c.Unsubscribe(joinStream)
+	case <-c.Joined():
 	}
 
 	ticker := time.NewTicker(c.pingInterval)

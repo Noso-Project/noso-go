@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -8,10 +9,10 @@ import (
 
 func TestBroker(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
-		done := make(chan struct{}, 0)
-		defer close(done)
 		event, _ := parse(JOINOK_default)
-		broker := NewBroker(done)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		broker := NewBroker(ctx, cancel)
 		subCh := broker.Subscribe(JoinTopic)
 		broker.Publish(event)
 
@@ -29,9 +30,9 @@ func TestBroker(t *testing.T) {
 		}
 	})
 	t.Run("subscribe", func(t *testing.T) {
-		done := make(chan struct{}, 0)
-		defer close(done)
-		broker := NewBroker(done)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		broker := NewBroker(ctx, cancel)
 
 		got := broker.SubscriptionCount()
 		want := 0
@@ -53,9 +54,9 @@ func TestBroker(t *testing.T) {
 		}
 	})
 	t.Run("unsubscribe", func(t *testing.T) {
-		done := make(chan struct{}, 0)
-		defer close(done)
-		broker := NewBroker(done)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		broker := NewBroker(ctx, cancel)
 		stream := broker.Subscribe(JoinTopic)
 		broker.Unsubscribe(stream)
 
@@ -68,31 +69,10 @@ func TestBroker(t *testing.T) {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})
-	// t.Run("subscriber not listening", func(t *testing.T) {
-	// 	done := make(chan struct{}, 0)
-	// 	defer close(done)
-	// 	event, _ := parse(PONG_default)
-	// 	broker := NewBroker(done)
-	// 	subCh := broker.Subscribe(PingPongTopic)
-	// 	broker.Publish(event)
-
-	// 	var got interface{}
-	// 	select {
-	// 	case got = <-subCh:
-	// 	case <-time.After(100 * time.Millisecond):
-	// 		t.Fatal("Failed to get message from broker")
-	// 	}
-
-	// 	want := event
-
-	// 	if !reflect.DeepEqual(got, want) {
-	// 		t.Errorf("got %v, want %v", got, want)
-	// 	}
-	// })
 	t.Run("broker closes all subs on exit", func(t *testing.T) {
-		done := make(chan struct{}, 0)
+		ctx, cancel := context.WithCancel(context.Background())
 		event, _ := parse(PONG_default)
-		broker := NewBroker(done)
+		broker := NewBroker(ctx, cancel)
 		pingStream := broker.Subscribe(PingPongTopic)
 		joinStream := broker.Subscribe(JoinTopic)
 		poolDataStream := broker.Subscribe(PoolDataTopic)
@@ -115,11 +95,47 @@ func TestBroker(t *testing.T) {
 			}
 		}
 
-		close(done)
+		cancel()
 
 		assertRoStreamClosed(t, pingStream)
 		assertRoStreamClosed(t, joinStream)
 		assertRoStreamClosed(t, poolDataStream)
+	})
+	t.Run("broker hung on publish", func(t *testing.T) {
+		oldTimeout := PublishTimeout
+		PublishTimeout = 1 * time.Millisecond
+		defer func() { PublishTimeout = oldTimeout }()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		event, _ := parse(PONG_default)
+		broker := NewBroker(ctx, cancel)
+		pingStream := broker.Subscribe(PingPongTopic)
+		broker.Subscribe(PingPongTopic)
+
+		go func() {
+			// Publish an event to trigger publish workflow
+			broker.Publish(event)
+
+			// Now send another event to ensure broker should be hung on write
+			// to stream causing it to restart the client
+			broker.Publish(event)
+		}()
+
+		select {
+		case got := <-pingStream:
+			if got == nil {
+				t.Fatalf("got nil, want %v", got)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Failed to get message from broker")
+		}
+
+		select {
+		case <-broker.Done():
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for broker to call cancel func")
+		}
 	})
 }
 
