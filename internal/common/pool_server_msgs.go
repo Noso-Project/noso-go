@@ -22,6 +22,8 @@ func (s ServerMessageType) String() string {
 		return "POOLSTEPS"
 	case PASSFAILED:
 		return "PASSFAILED"
+	case ALREADYCONNECTED:
+		return "ALREADYCONNECTED"
 	case STEP:
 		return "STEP"
 	case STEPOK:
@@ -38,6 +40,7 @@ const (
 	PONG
 	POOLSTEPS
 	PASSFAILED
+	ALREADYCONNECTED
 	STEP
 	STEPOK
 )
@@ -177,6 +180,18 @@ func newPassFailed(msg []string) (message passFailed) {
 	// TODO: Handle strconv errors
 	message = passFailed{}
 	message.MsgType = PASSFAILED
+
+	return message
+}
+
+type alreadyConnected struct {
+	serverMessage
+}
+
+func newAlreadyConnected(msg []string) (message alreadyConnected) {
+	// TODO: Handle strconv errors
+	message = alreadyConnected{}
+	message.MsgType = ALREADYCONNECTED
 
 	return message
 }

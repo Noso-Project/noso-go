@@ -13,34 +13,55 @@ import (
 )
 
 var (
+	// logger *zap.SugaredLogger
+
+	// Timeouts and Interval timers
 	ConnectTimeout          = 5 * time.Second
 	DeadlineExceededTimeout = 15 * time.Second
 	JoinTimeout             = 5 * time.Second
 	PingInterval            = 5 * time.Second
+	ReconnectWait           = 5 * time.Second
 )
 
 var (
-	ErrJoinTimeout = errors.New("Timed out while attempting to join pool")
-	ErrPassFailed  = errors.New("Failed to join pool: wrong password")
+	ErrJoinTimeout      = errors.New("Timed out while attempting to join pool")
+	ErrPassFailed       = errors.New("Failed to join pool: wrong password")
+	ErrAlreadyConnected = errors.New("Failed to join pool: already connected")
 )
 
 func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
 	// TODO: need to pass in poolPassword and walletAddress
+	InitLogger(os.Stdout)
+	msg := `
+# ##############################################################################
+#
+# New run started at %s
+#
+# ##############################################################################`
+
+	logger.Infof(msg, time.Now())
 	client = &Client{
-		done:         done,
-		poolAddr:     net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		auth:         "password leviable5",
-		mu:           new(sync.Mutex),
-		sendStream:   make(chan string, 0),
-		joinTimeout:  JoinTimeout,
-		pingInterval: PingInterval,
+		done:            done,
+		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
+		auth:            "password leviable6",
+		mu:              new(sync.Mutex),
+		sendStream:      make(chan string, 0),
+		doConnect:       make(chan struct{}),
+		doConnectErr:    make(chan error),
+		connTimeout:     ConnectTimeout,
+		deadlineTimeout: DeadlineExceededTimeout,
+		joinTimeout:     JoinTimeout,
+		pingInterval:    PingInterval,
 	}
 
 	started := make(chan struct{}, 0)
+	logger.Debug("Client starting")
 	go client.start(started)
 
+	// TODO: Need to protect this with select and return err
 	<-started
+	logger.Debug("Client started")
 
 	return client
 }
@@ -48,28 +69,37 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 type Client struct {
 	// TODO: Evaluate using a context instead of done channel
 	// TODO: Set auth
-	done       chan struct{}
-	poolAddr   string
-	auth       string // "poolPw walletAddr"
-	conn       net.Conn
-	connected  chan struct{}
-	joined     chan struct{}
-	sendStream chan string
-	broker     *Broker
-	mu         *sync.Mutex
+	done         chan struct{}
+	poolAddr     string
+	auth         string // "poolPw walletAddr"
+	conn         net.Conn
+	connected    chan struct{}
+	doConnect    chan struct{}
+	doConnectErr chan error
+	joined       chan struct{}
+	sendStream   chan string
+	broker       *Broker
+	mu           *sync.Mutex
 
 	// Timeouts/Intervals
-	joinTimeout  time.Duration
-	pingInterval time.Duration
+	connTimeout     time.Duration
+	deadlineTimeout time.Duration
+	joinTimeout     time.Duration
+	pingInterval    time.Duration
 }
 
 func (c *Client) init() (context.Context, context.CancelFunc) {
+	logger.Debug("Initializing client")
 	c.mu.Lock()
+	logger.Debug("init() has the lock")
+	defer logger.Debug("init() released the lock")
 	defer c.mu.Unlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	c.connected = make(chan struct{}, 0)
 	c.joined = make(chan struct{}, 0)
 	c.broker = NewBroker(ctx, cancel)
+
+	logger.Debug("Client initialized")
 
 	return ctx, cancel
 }
@@ -79,62 +109,102 @@ func (c *Client) start(started chan struct{}) {
 	var once sync.Once
 
 	for count := 0; ; count++ {
+		logger.Debugf("Count is: %d", count)
 		ctx, cancel := c.init()
-		defer cancel()
+		// TODO: need to wrap this section in func so cancel can be called
+		//       and garbage collected
+		defer func(cancel context.CancelFunc) { logger.Debugf("Calling deferred cancel()"); cancel() }(cancel)
 
+		logger.Debugf("Starting send, recv, and ping goroutines")
 		wg.Add(3)
 		go c.send(ctx, cancel, &wg)
 		go c.recv(ctx, cancel, &wg)
 		go c.ping(ctx, cancel, &wg)
 		wg.Wait()
-
-		if count > 0 {
-			c.Connect()
-		}
+		logger.Debugf("send, recv, and ping started")
 
 		once.Do(func() { close(started) })
 
+		// Wait for trigger to connect from Connect() method
+		<-c.doConnect
+		err := c.connect()
+		if err != nil {
+			switch err.(error) {
+			case ErrAlreadyConnected:
+				cancel()
+				continue
+			default:
+				select {
+				case c.doConnectErr <- err:
+				default:
+					logger.Panic(err)
+				}
+			}
+		} else {
+			select {
+			case c.doConnectErr <- nil:
+			default:
+			}
+		}
+
 		select {
 		case <-c.done:
+			logger.Debug("<-c.done closed")
 			cancel()
 			return
 		case <-ctx.Done():
+			logger.Debug("<-ctx.Done() closed")
 		}
 
-		cancel()
-
 		// TODO: Set configurable reconnect interval
-		// fmt.Println("Will reconnect in 5 seconds")
-		// time.Sleep(5 * time.Millisecond)
+		logger.Infof("Will reconnect in %s seconds", ReconnectWait)
+		time.Sleep(ReconnectWait)
+		logger.Info("About to reconnect")
 	}
 }
 
 func (c *Client) Connected() chan struct{} {
 	c.mu.Lock()
+	logger.Debug("Connected() has the lock")
+	defer logger.Debug("Connected() released the lock")
 	defer c.mu.Unlock()
 	return c.connected
 }
 
 func (c *Client) Joined() chan struct{} {
 	c.mu.Lock()
+	logger.Debug("Joined() has the lock")
+	defer logger.Debug("Joined() released the lock")
 	defer c.mu.Unlock()
 	return c.joined
 }
-
 func (c *Client) Connect() (err error) {
+	close(c.doConnect)
+	err = <-c.doConnectErr
+	return err
+}
+
+func (c *Client) connect() (err error) {
 
 	if c.conn != nil {
+		logger.Debug("Found existing connection; closing")
 		c.conn.Close()
 	}
 
-	c.conn, err = net.DialTimeout("tcp", c.poolAddr, ConnectTimeout)
+	c.conn, err = net.DialTimeout("tcp", c.poolAddr, c.connTimeout)
 	if err != nil {
 		return err
 	}
 
 	close(c.connected)
 
-	joinStream := c.Subscribe(JoinTopic)
+	logger.Debug("Subscribing to JoinTopic")
+	joinStream, err := c.Subscribe(JoinTopic)
+	if err != nil {
+		return err
+	}
+	logger.Debug("Subscribed to JoinTopic for stream: ", joinStream)
+	defer logger.Debug("deferred Unsubscribe for ", joinStream)
 	defer c.Unsubscribe(joinStream)
 
 	// TODO: Might need to explicitely separate connect and join,
@@ -143,12 +213,20 @@ func (c *Client) Connect() (err error) {
 	c.join()
 
 	select {
-	case <-joinStream:
+	case resp := <-joinStream:
+		logger.Debugf("JOIN resp: %s", resp)
+		switch resp.(type) {
+		case joinOk:
+		case alreadyConnected:
+			return ErrAlreadyConnected
+		default:
+		}
 	case <-time.After(c.joinTimeout):
 		return ErrJoinTimeout
 	}
 
 	close(c.joined)
+	logger.Debug("c.connect() complete")
 	return nil
 }
 
@@ -163,15 +241,20 @@ func (c *Client) Send(msg string) {
 		// TODO: Should I make this timeout? Or use a context deadline?
 		select {
 		case <-c.done:
+			logger.Debug("<-c.done executing")
 		case c.sendStream <- msg:
+			logger.Debugf("Sending %s to %v", msg, c.sendStream)
 		}
-
 	}(msg)
 }
 
 // TODO: Really shouldn't use chan interface{} here
-func (c *Client) Subscribe(topic Topic) <-chan interface{} {
+func (c *Client) Subscribe(topic Topic) (<-chan interface{}, error) {
+	// TODO: There is an expectation here that Subscribe blocks
+	//       until we are actually subscribed
 	c.mu.Lock()
+	logger.Debug("Subscribe() has the lock")
+	defer logger.Debug("Subscribe() released the lock")
 	defer c.mu.Unlock()
 	return c.broker.Subscribe(topic)
 }
@@ -180,6 +263,8 @@ func (c *Client) Subscribe(topic Topic) <-chan interface{} {
 // TODO: Need to return an error here
 func (c *Client) Unsubscribe(unsubStream <-chan interface{}) {
 	c.mu.Lock()
+	logger.Debug("Unsubscribe() has the lock")
+	defer logger.Debug("Unsubscribe() released the lock")
 	defer c.mu.Unlock()
 	c.broker.Unsubscribe(unsubStream)
 }
@@ -191,7 +276,7 @@ func (c *Client) send(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 		case <-ctx.Done():
 			return
 		case msg := <-c.sendStream:
-			// fmt.Println("Send: ", msg)
+			logger.Debug("Send: ", msg)
 			msg = c.auth + " " + msg
 			fmt.Fprintln(c.conn, msg)
 		}
@@ -209,15 +294,16 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 
 	scanner := bufio.NewScanner(c.conn)
 
+	deadline := c.deadlineTimeout
 	for scanner.Scan() {
-		c.conn.SetReadDeadline(time.Now().Add(DeadlineExceededTimeout))
+		c.conn.SetReadDeadline(time.Now().Add(deadline))
 		resp := scanner.Text()
-		// fmt.Println("Recv: ", resp)
+		logger.Debug("Recv: ", resp)
 		msg, err := parse(resp)
 		if err != nil {
-			fmt.Println("Received an unknown response: ", resp)
+			logger.Error("Received an unknown response: ", resp)
 		}
-		// fmt.Println("Parsed msg: ", msg)
+		// logger.Debug("Parsed msg: ", msg)
 		c.broker.Publish(msg)
 	}
 
@@ -225,8 +311,9 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 		if errors.Is(err, os.ErrDeadlineExceeded) {
 			// TODO: Need to log that the deadline was exceeded and a
 			//       reconnect attempt will happen
+			logger.Error("deadline exceeded: ", err)
 		} else {
-			fmt.Fprintln(os.Stderr, "err reading scanner: ", err)
+			logger.Error("err reading scanner: ", err)
 		}
 	}
 

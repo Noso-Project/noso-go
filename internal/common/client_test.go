@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +20,11 @@ func getClientSvr(t testing.TB) (*Client, *TcpServer, chan struct{}) {
 	client := NewClient(done, svr.Host, svr.Port)
 
 	return client, svr, done
+}
+
+func TestMain(m *testing.M) {
+	// logWriter = os.Stdout
+	os.Exit(m.Run())
 }
 
 func TestClientConnect(t *testing.T) {
@@ -99,7 +105,10 @@ func TestClientConnect(t *testing.T) {
 		svr.rMap[JOIN] = []string{PASSFAILED_default}
 		defer close(done)
 
-		joinStream := client.Subscribe(JoinTopic)
+		joinStream, err := client.Subscribe(JoinTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(joinStream)
 		// broker publish will hang here if connect is not in it's own
 		// goroutine
@@ -121,12 +130,19 @@ func TestClientConnect(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
+		oldWait := ReconnectWait
+		ReconnectWait = time.Microsecond
+		defer func() { ReconnectWait = oldWait }()
+
 		client, svr, done := getClientSvr(t)
 		defer close(done)
 
 		svr.printConnErr = false
 
-		pingStream := client.Subscribe(PingPongTopic)
+		pingStream, err := client.Subscribe(PingPongTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		client.Connect()
 
 		// Get one pong, close the svr conn, then
@@ -171,7 +187,10 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting to rejoin pool")
 		}
 
-		pingStream = client.Subscribe(PingPongTopic)
+		pingStream, err = client.Subscribe(PingPongTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(pingStream)
 
 		select {
@@ -185,12 +204,19 @@ func TestClientConnect(t *testing.T) {
 		DeadlineExceededTimeout = 10 * time.Millisecond
 		defer func() { DeadlineExceededTimeout = oldDeadline }()
 
+		oldWait := ReconnectWait
+		ReconnectWait = time.Microsecond
+		defer func() { ReconnectWait = oldWait }()
+
 		client, svr, done := getClientSvr(t)
 		defer close(done)
 
 		svr.printConnErr = false
 
-		pingStream := client.Subscribe(PingPongTopic)
+		pingStream, err := client.Subscribe(PingPongTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		client.Connect()
 
 		// Get one pong, wait for deadline exceeded, then
@@ -234,7 +260,10 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting to rejoin pool")
 		}
 
-		pingStream = client.Subscribe(PingPongTopic)
+		pingStream, err = client.Subscribe(PingPongTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(pingStream)
 		client.Send("PING 2")
 
@@ -242,6 +271,86 @@ func TestClientConnect(t *testing.T) {
 		case <-pingStream:
 		case <-time.After(100 * time.Millisecond):
 			t.Fatal("Timed out waiting for server pong")
+		}
+	})
+	t.Run("reconnect on ALREADYCONNECTED", func(t *testing.T) {
+		oldWait := ReconnectWait
+		ReconnectWait = time.Microsecond
+		defer func() { ReconnectWait = oldWait }()
+
+		client, svr, done := getClientSvr(t)
+		svr.rMap[JOIN] = []string{ALREADYCONNECTED_default, JOINOK_default}
+		defer close(done)
+
+		svr.printConnErr = false
+
+		joinStream, err := client.Subscribe(JoinTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
+		joinPassthroughStream := make(chan interface{}, 0)
+
+		// TODO: This is getting ugly, need to rethink connect and join
+		//     : Probably need to internally spearate connect and join
+		go func() {
+			defer close(joinPassthroughStream)
+			select {
+			case <-done:
+				return
+			case joinPassthroughStream <- <-joinStream:
+			}
+		}()
+
+		oldConnectedChan := client.Connected()
+		client.Connect()
+
+		// Get ALREADYCONNECTED to force conn close and reconnect
+
+		select {
+		case msg := <-joinPassthroughStream:
+			switch msg.(type) {
+			case alreadyConnected:
+			default:
+				t.Fatal("Expected ALREADYCONNECTED, got: ", msg)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting for ALREADYCONNECTED")
+		}
+
+		// TODO: Should I be waiting for these streams to actually close?
+		client.Unsubscribe(joinStream)
+
+		// Subtle race condition here:
+		//  - After closing the connection, its possible that
+		//  - the Connected() and Joined() checks will work
+		//  - because they are the old, already closed channels,
+		//  - and then the Subscribe call goes to the old broker
+		//
+		// Need to wait for the client to re-init before checking
+		// its connected/joined status
+
+		start := time.Now()
+		for oldConnectedChan == client.Connected() {
+			// TODO: Set this back to 100 microseconds
+			time.Sleep(100 * time.Microsecond)
+
+			if time.Since(start) > 100*time.Millisecond {
+				t.Fatal("Timed out waiting to reconnect")
+			}
+		}
+
+		// Wait for connect
+		select {
+		case <-client.Connected():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to connect to pool")
+		}
+
+		// Wait for join
+		select {
+		case <-client.Joined():
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Timed out waiting to join pool")
 		}
 	})
 }
@@ -260,7 +369,10 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		pongStream := client.Subscribe(PingPongTopic)
+		pongStream, err := client.Subscribe(PingPongTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(pongStream)
 
 		select {
@@ -284,7 +396,10 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		poolStepsStream := client.Subscribe(PoolStepsTopic)
+		poolStepsStream, err := client.Subscribe(PoolStepsTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(poolStepsStream)
 
 		select {
@@ -297,7 +412,10 @@ func TestClientMessaging(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
-		poolDataStream := client.Subscribe(PoolDataTopic)
+		poolDataStream, err := client.Subscribe(PoolDataTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(poolDataStream)
 
 		go func() {
@@ -330,7 +448,10 @@ func TestClientMessaging(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 
-		poolDataStream := client.Subscribe(PoolDataTopic)
+		poolDataStream, err := client.Subscribe(PoolDataTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(poolDataStream)
 		go func() {
 			err := client.Connect()
@@ -365,7 +486,10 @@ func TestClientMessaging(t *testing.T) {
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
 
-		poolDataStream := client.Subscribe(PoolDataTopic)
+		poolDataStream, err := client.Subscribe(PoolDataTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(poolDataStream)
 		go func() {
 			err := client.Connect()
@@ -405,7 +529,10 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		stepOkStream := client.Subscribe(StepOkTopic)
+		stepOkStream, err := client.Subscribe(StepOkTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(stepOkStream)
 
 		select {
@@ -434,7 +561,10 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		stepOkStream := client.Subscribe(StepOkTopic)
+		stepOkStream, err := client.Subscribe(StepOkTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
 		defer client.Unsubscribe(stepOkStream)
 
 		client.Send("STEP 35360 0e0000cyk 8b9554VKg 9")
@@ -463,9 +593,15 @@ func BenchmarkSend(b *testing.B) {
 	client, svr, done := getClientSvr(b)
 	defer close(done)
 	svr.printConnErr = false
-	pingStream := client.Subscribe(PingPongTopic)
+	pingStream, err := client.Subscribe(PingPongTopic)
+	if err != nil {
+		b.Fatal("Got an error and didn't expect one:", err)
+	}
 	client.Connect()
-	poolDataStream := client.Subscribe(PoolDataTopic)
+	poolDataStream, err := client.Subscribe(PoolDataTopic)
+	if err != nil {
+		b.Fatal("Got an error and didn't expect one:", err)
+	}
 	var x int
 	for n := 0; n < b.N; n++ {
 		client.Send("PING 0")
@@ -475,7 +611,7 @@ func BenchmarkSend(b *testing.B) {
 			case <-pingStream:
 			case <-poolDataStream:
 			case <-time.After(100 * time.Millisecond):
-				fmt.Println("Failed (timeout)")
+				b.Log("Failed (timeout)")
 				b.Error("Failed (timeout)")
 			}
 		}
@@ -486,9 +622,15 @@ func BenchmarkSendParallel(b *testing.B) {
 	client, svr, done := getClientSvr(b)
 	defer close(done)
 	svr.printConnErr = false
-	pingStream := client.Subscribe(PingPongTopic)
+	pingStream, err := client.Subscribe(PingPongTopic)
+	if err != nil {
+		b.Fatal("Got an error and didn't expect one:", err)
+	}
 	client.Connect()
-	poolDataStream := client.Subscribe(PoolDataTopic)
+	poolDataStream, err := client.Subscribe(PoolDataTopic)
+	if err != nil {
+		b.Fatal("Got an error and didn't expect one:", err)
+	}
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			client.Send("PING 0")
@@ -498,7 +640,7 @@ func BenchmarkSendParallel(b *testing.B) {
 				case <-pingStream:
 				case <-poolDataStream:
 				case <-time.After(100 * time.Millisecond):
-					fmt.Println("Failed (timeout)")
+					b.Log("Failed (timeout)")
 					b.Error("Failed (timeout)")
 				}
 			}
@@ -534,11 +676,11 @@ func BenchmarkSendParallel(b *testing.B) {
 // 			for x = 0; x < 2; x++ {
 // 				select {
 // 				case <-pingStream:
-// 					// fmt.Println("in pingstream")
+// 					// b.Log("in pingstream")
 // 				case <-poolDataStream:
-// 					// fmt.Println("in pooldatastream")
+// 					// b.Log("in pooldatastream")
 // 				case <-time.After(500 * time.Millisecond):
-// 					// fmt.Println("Failed 1 (timeout)")
+// 					// b.Log("Failed 1 (timeout)")
 // 					b.Fatal("Failed 1 (timeout)")
 // 				}
 // 			}
@@ -567,11 +709,11 @@ func BenchmarkSendParallel(b *testing.B) {
 // 			for x = 0; x < 2; x++ {
 // 				select {
 // 				case <-pingStream:
-// 					// fmt.Println("in pingstream")
+// 					// b.Log("in pingstream")
 // 				case <-poolDataStream:
-// 					// fmt.Println("in pooldatastream")
+// 					// b.Log("in pooldatastream")
 // 				case <-time.After(500 * time.Millisecond):
-// 					// fmt.Println("Failed 2 (timeout)")
+// 					// b.Log("Failed 2 (timeout)")
 // 					b.Fatal("Failed 2 (timeout)")
 // 				}
 // 			}

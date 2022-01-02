@@ -23,6 +23,8 @@ func parse(msg string) (ServerMessage, error) {
 		return newPong(splitMsg), nil
 	case "PASSFAILED":
 		return newPassFailed(splitMsg), nil
+	case "ALREADYCONNECTED":
+		return newAlreadyConnected(splitMsg), nil
 	case "POOLSTEPS":
 		return newPoolSteps(splitMsg), nil
 	case "STEPOK":

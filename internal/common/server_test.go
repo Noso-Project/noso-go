@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,7 +69,7 @@ type TcpServer struct {
 func (t *TcpServer) stop() {
 	select {
 	case <-t.done:
-		// fmt.Println("CLOSING")
+		// logger.Debug("CLOSING")
 		t.Close()
 	}
 	return
@@ -80,8 +79,9 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 	var reqType ServerMessageType
 	wg.Done()
 	// TODO: need to incorporate either a done channel or context
+	respCount := 0
 	for {
-		// fmt.Println("Waiting for new connection")
+		// logger.Debug("Waiting for new connection")
 		t.conn, err = t.listener.Accept()
 		if err != nil {
 			err = errors.New("could not accept connection")
@@ -91,17 +91,19 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 			err = errors.New("could not create connection")
 			break
 		}
-		// fmt.Println("Got new connection")
+		// logger.Debug("Got new connection")
 
 		scanner := bufio.NewScanner(t.conn)
 
 		for scanner.Scan() {
+			// TODO: This mod scheme wont work if I have more than one rMap configured
+			respCount++
 			req := scanner.Text()
-			// fmt.Println("Svr conn output: ", req)
+			// logger.Debug("Svr conn output: ", req)
 			// Strip auth prefix from command: "poolPw walletAddr Command"
 			reqSplit := strings.SplitN(req, " ", 3)
 			if len(reqSplit) < 3 {
-				fmt.Println("wth is this? ", req)
+				logger.Debug("wth is this? ", req)
 				continue
 			}
 			req = reqSplit[2]
@@ -110,9 +112,12 @@ func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 				panic(err)
 			}
 
-			// // TODO: need to pop and/or cycle through slice
+			// TODO: need to pop and/or cycle through slice
+			var idx int
 			resp, ok := t.rMap[reqType]
-			if !ok {
+			if ok {
+				idx = (len(resp) - 1) % respCount
+			} else {
 				resp, ok = defaultRespMap[reqType]
 				if !ok {
 					pMsg := `Could not find a response for request in rMap
@@ -120,12 +125,14 @@ Req:  %s
 rMap: %v`
 					panic(fmt.Sprintf(pMsg, req, t.rMap))
 				}
+				idx = 0
 			}
-			fmt.Fprintln(t.conn, resp[0])
+
+			fmt.Fprintln(t.conn, resp[idx])
 		}
 
 		if err := scanner.Err(); err != nil && t.printConnErr {
-			fmt.Fprintln(os.Stderr, "error reading connection: ", err)
+			logger.Debugf("error reading connection: ", err)
 		}
 
 	}
