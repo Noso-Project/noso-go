@@ -98,6 +98,9 @@ endif
 unit-tests:
 	$(gotest) -v -race -cover -timeout 10s ./...
 
+.PHONY: benchmarks
+benchmarks: benchmark-send benchmark-sendparallel benchmark-msbasic benchmark-msfast
+
 .PHONY: benchmark-%
 benchmark-%:
 	#  -run=XXX excludes unit tests

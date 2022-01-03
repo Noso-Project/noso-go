@@ -8,6 +8,10 @@ import (
 	"unsafe"
 )
 
+func MultiStep256Hash(val string) string {
+	return NewMultiStep256(val).Hash("")
+}
+
 func NewMultiStep256(seed string) *MultiStep256 {
 	m := new(MultiStep256)
 	m.encoded = make([]byte, 64)

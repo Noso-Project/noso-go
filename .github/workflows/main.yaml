@@ -48,6 +48,12 @@ jobs:
       - name: benchmark Send (Parallel)
         run: make benchmark-sendparallel
 
+      - name: benchmark Ms256 (basic)
+        run: make benchmark-msbasic
+
+      - name: benchmark Ms256 (fast)
+        run: make benchmark-msfast
+
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
