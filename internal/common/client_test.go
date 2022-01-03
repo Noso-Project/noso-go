@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -22,10 +21,11 @@ func getClientSvr(t testing.TB) (*Client, *TcpServer, chan struct{}) {
 	return client, svr, done
 }
 
-func TestMain(m *testing.M) {
-	// logWriter = os.Stdout
-	os.Exit(m.Run())
-}
+// TODO: Remove this if we no longer need it
+// func TestMain(m *testing.M) {
+// 	// logWriter = os.Stdout
+// 	os.Exit(m.Run())
+// }
 
 func TestClientConnect(t *testing.T) {
 	t.Run("new client", func(t *testing.T) {
@@ -110,6 +110,8 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
 		defer client.Unsubscribe(joinStream)
+		// TODO: This might cause a hang in the client in a real world
+		//       scenario. Investigate and improve if needed
 		// broker publish will hang here if connect is not in it's own
 		// goroutine
 		go client.Connect()
@@ -164,6 +166,8 @@ func TestClientConnect(t *testing.T) {
 		//
 		// Need to wait for the client to re-init before checking
 		// its connected/joined status
+		// TODO: Should probably use a sync.Cond broadcast and/or a
+		//       broker subscription to watch for a connected event
 
 		oldConnectedChan := client.Connected()
 
@@ -514,45 +518,7 @@ func TestClientMessaging(t *testing.T) {
 			}
 		}
 	})
-	t.Run("stepok", func(t *testing.T) {
-		// Use ping to trigger a stepok resp
-		oldPing := PingInterval
-		PingInterval = 10 * time.Millisecond
-		defer func() { PingInterval = oldPing }()
-
-		client, svr, done := getClientSvr(t)
-		defer close(done)
-
-		svr.rMap[PING] = []string{STEPOK_default}
-		err := client.Connect()
-		if err != nil {
-			t.Fatal("Got an error and didn't expect one: ", err)
-		}
-
-		stepOkStream, err := client.Subscribe(StepOkTopic)
-		if err != nil {
-			t.Fatal("Got an error and didn't expect one:", err)
-		}
-		defer client.Unsubscribe(stepOkStream)
-
-		select {
-		case resp := <-stepOkStream:
-			switch resp.(type) {
-			case stepOk:
-				got := resp.(stepOk).PopValue
-				want := 256
-
-				if got != want {
-					t.Errorf("got %d, want %d", got, want)
-				}
-			default:
-				t.Errorf("Expected stepOk msg, but got %v", resp)
-			}
-		case <-time.After(100 * time.Millisecond):
-			t.Errorf("Timed out waiting for server StepOk")
-		}
-	})
-	t.Run("step", func(t *testing.T) {
+	t.Run("step and stepOk", func(t *testing.T) {
 		client, _, done := getClientSvr(t)
 		defer close(done)
 

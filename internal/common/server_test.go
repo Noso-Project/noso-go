@@ -69,7 +69,6 @@ type TcpServer struct {
 func (t *TcpServer) stop() {
 	select {
 	case <-t.done:
-		// logger.Debug("CLOSING")
 		t.Close()
 	}
 	return
@@ -141,7 +140,6 @@ rMap: %v`
 }
 
 func (t *TcpServer) Close() (err error) {
-	// t.conn.Close()
 	return t.listener.Close()
 }
 

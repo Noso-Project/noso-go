@@ -13,7 +13,8 @@ var logger *zap.SugaredLogger
 var logWriter io.Writer
 
 func InitLogger(w io.Writer) {
-	// TODO: Make custom logger that includes goroutine info?
+	// TODO: Add Production, Development, and Test loggers
+	// TODO: Make custom logger that includes includes calling function in log for Dev/Test loggers
 	if logger == nil {
 		writeSyncer := getLogWriter()
 		encoder := getEncoder()

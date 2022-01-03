@@ -9,6 +9,7 @@ import (
 type ServerMessageType int
 
 func (s ServerMessageType) String() string {
+	// TODO: Seems like I should be able to do this without a switch statement
 	switch s {
 	case JOIN:
 		return "JOIN"
@@ -74,6 +75,7 @@ type joinOk struct {
 
 func newJoinOk(msg []string) (message joinOk) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = joinOk{}
 	message.MsgType = JOINOK
 	message.poolAddr = msg[1]
@@ -113,6 +115,7 @@ type pong struct {
 
 func newPong(msg []string) (message pong) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = pong{}
 	message.MsgType = PONG
 	block, _ := strconv.Atoi(msg[2])
@@ -150,6 +153,7 @@ type poolSteps struct {
 
 func newPoolSteps(msg []string) (message poolSteps) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = poolSteps{}
 	message.MsgType = POOLSTEPS
 	block, _ := strconv.Atoi(msg[2])
@@ -178,6 +182,7 @@ type passFailed struct {
 
 func newPassFailed(msg []string) (message passFailed) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = passFailed{}
 	message.MsgType = PASSFAILED
 
@@ -190,6 +195,7 @@ type alreadyConnected struct {
 
 func newAlreadyConnected(msg []string) (message alreadyConnected) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = alreadyConnected{}
 	message.MsgType = ALREADYCONNECTED
 
@@ -203,6 +209,7 @@ type stepOk struct {
 
 func newStepOk(msg []string) (message stepOk) {
 	// TODO: Handle strconv errors
+	// TODO: Check msg has expected len before indexing
 	message = stepOk{}
 	message.MsgType = STEPOK
 	popValue, _ := strconv.Atoi(msg[1])

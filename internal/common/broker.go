@@ -46,15 +46,12 @@ var (
 // TODO: find a way to not use interface{} for the channel
 //       - Already boned on this once
 type Broker struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	pubStream   chan interface{}
-	subStream   chan topicSubscription
-	unsubStream chan (<-chan interface{})
-	subCountReq chan chan int
-	// subs           map[Topic][]chan interface{}
-	// subCount       int
-	// mu             *sync.Mutex
+	ctx            context.Context
+	cancel         context.CancelFunc
+	pubStream      chan interface{}
+	subStream      chan topicSubscription
+	unsubStream    chan (<-chan interface{})
+	subCountReq    chan chan int
 	publishTimeout time.Duration
 }
 
@@ -67,11 +64,6 @@ func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 	b.subStream = make(chan topicSubscription, 0)
 	b.unsubStream = make(chan (<-chan interface{}), 0)
 	b.subCountReq = make(chan chan int, 0)
-	// b.subs = make(map[Topic][]chan interface{})
-	// b.subs[JoinTopic] = make([]chan interface{}, 0)
-	// b.subs[PingPongTopic] = make([]chan interface{}, 0)
-	// b.subCount = 0
-	// b.mu = new(sync.Mutex)
 	b.publishTimeout = PublishTimeout
 
 	var wg sync.WaitGroup
@@ -100,6 +92,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 		case <-b.ctx.Done():
 			logger.Debug("Entering <-b.ctx.Done()")
 			// Attempt to close every stream in subs
+			// TODO: Make this safer, so closing a closed stream doesnt panic
 			for _, v := range subs {
 				for _, stream := range v[:] {
 					close(stream)
@@ -125,7 +118,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				for idx, stream := range v[:] {
 					if stream == unsubStream {
 						subs[k] = removeIndex(subs[k], idx)
-						// logger.Debugf("Closing stream: %v", stream)
+						logger.Debugf("Closing stream: %v", stream)
 						close(stream)
 					}
 				}
@@ -138,7 +131,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				// TODO: Better way to do this
 				logger.Debug("Could not correlate server response to a topic: ", topics, err)
 			}
-			// logger.Debugf("Topics are: %v", topics)
+			logger.Debugf("Topics are: %v", topics)
 
 		loop:
 			for _, topic := range topics {
@@ -235,9 +228,6 @@ func (b *Broker) Unsubscribe(unsub <-chan interface{}) {
 }
 
 func (b *Broker) SubscriptionCount() int {
-	// TODO: Instead of returning value, requiring mutex locks,
-	//	     return channel, and have start goroutine return the
-	//		 current subscription count
 	logger.Debug("Entering SubscriptionCount")
 	subCountStream := make(chan int, 0)
 	defer close(subCountStream)
