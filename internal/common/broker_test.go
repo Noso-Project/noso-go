@@ -32,46 +32,52 @@ func TestBroker(t *testing.T) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 	})
-	// t.Run("subscribe", func(t *testing.T) {
-	// 	ctx, cancel := context.WithCancel(context.Background())
-	// 	defer cancel()
-	// 	broker := NewBroker(ctx, cancel)
+	t.Run("subscribe", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		broker := NewBroker(ctx, cancel)
 
-	// 	got := broker.SubscriptionCount()
-	// 	want := 0
+		got := broker.SubscriptionCount()
+		want := 0
 
-	// 	if got != want {
-	// 		t.Errorf("got %d, want %d", got, want)
-	// 	}
+		if got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
 
-	// 	subCh := broker.Subscribe(JoinTopic)
-	// 	event, _ := parse(JOINOK_default)
-	// 	broker.Publish(event)
-	// 	<-subCh
+		joinStream, err := broker.Subscribe(JoinTopic)
+		if err != nil {
+			t.Error("Got an error and didn't expect one:", err)
+		}
+		event, _ := parse(JOINOK_default)
+		broker.Publish(event)
+		<-joinStream
 
-	// 	got = broker.SubscriptionCount()
-	// 	want = 1
+		got = broker.SubscriptionCount()
+		want = 1
 
-	// 	if got != want {
-	// 		t.Errorf("got %d, want %d", got, want)
-	// 	}
-	// })
-	// t.Run("unsubscribe", func(t *testing.T) {
-	// 	ctx, cancel := context.WithCancel(context.Background())
-	// 	defer cancel()
-	// 	broker := NewBroker(ctx, cancel)
-	// 	stream := broker.Subscribe(JoinTopic)
-	// 	broker.Unsubscribe(stream)
+		if got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	})
+	t.Run("unsubscribe", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		broker := NewBroker(ctx, cancel)
+		joinStream, err := broker.Subscribe(JoinTopic)
+		if err != nil {
+			t.Error("Got an error and didn't expect one:", err)
+		}
+		broker.Unsubscribe(joinStream)
 
-	// 	assertRoStreamClosed(t, stream)
+		assertRoStreamClosed(t, joinStream)
 
-	// 	got := broker.SubscriptionCount()
-	// 	want := 0
+		got := broker.SubscriptionCount()
+		want := 0
 
-	// 	if got != want {
-	// 		t.Errorf("got %d, want %d", got, want)
-	// 	}
-	// })
+		if got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	})
 	t.Run("broker closes all subs on exit", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		event, _ := parse(PONG_default)

@@ -51,6 +51,7 @@ type Broker struct {
 	pubStream   chan interface{}
 	subStream   chan topicSubscription
 	unsubStream chan (<-chan interface{})
+	subCountReq chan chan int
 	// subs           map[Topic][]chan interface{}
 	// subCount       int
 	// mu             *sync.Mutex
@@ -65,6 +66,7 @@ func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 	b.pubStream = make(chan interface{}, 0)
 	b.subStream = make(chan topicSubscription, 0)
 	b.unsubStream = make(chan (<-chan interface{}), 0)
+	b.subCountReq = make(chan chan int, 0)
 	// b.subs = make(map[Topic][]chan interface{})
 	// b.subs[JoinTopic] = make([]chan interface{}, 0)
 	// b.subs[PingPongTopic] = make([]chan interface{}, 0)
@@ -156,6 +158,16 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				logger.Debug("msg := <-b.pubStream released the lock")
 			}
 			logger.Debug("Leaving msg := <-b.pubStream")
+		case subCountStream := <-b.subCountReq:
+			subCount := 0
+			for _, v := range subs {
+				subCount += len(v)
+			}
+			select {
+			case <-b.Done():
+				return
+			case subCountStream <- subCount:
+			}
 		}
 	}
 }
@@ -222,13 +234,19 @@ func (b *Broker) Unsubscribe(unsub <-chan interface{}) {
 	logger.Debug("Leaving Broker Unsubscribe")
 }
 
-//func (b *Broker) SubscriptionCount() int {
-//	// TODO: Instead of returning value, requiring mutex locks,
-//	//	     return channel, and have start goroutine return the
-//	//		 current subscription count
-//	subCount := 0
-//	for _, v := range subs {
-//		subCount += len(v)
-//	}
-//	return subCount
-//}
+func (b *Broker) SubscriptionCount() int {
+	// TODO: Instead of returning value, requiring mutex locks,
+	//	     return channel, and have start goroutine return the
+	//		 current subscription count
+	logger.Debug("Entering SubscriptionCount")
+	subCountStream := make(chan int, 0)
+	defer close(subCountStream)
+	b.subCountReq <- subCountStream
+	select {
+	case <-b.Done():
+		return -1
+	case count := <-subCountStream:
+		logger.Debugf("Received %d subscriptions count from subCountStream", count)
+		return count
+	}
+}
