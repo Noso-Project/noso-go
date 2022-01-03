@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/sha256"
 	"testing"
 )
 
@@ -96,5 +97,40 @@ func BenchmarkMsFast(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		hasher.Hash(next)
+	}
+}
+
+var seed string
+var next string
+var nextBytes []byte
+
+func BenchmarkAAAFoo(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed = "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZf"
+	next = "PEf1"
+	hasher := NewFoo(seed)
+
+	for n := 0; n < b.N; n++ {
+		hasher.Hash(next)
+	}
+}
+
+func BenchmarkAAABarNextBytes(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed = "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf1"
+	nextBytes = []byte("PEf1")
+	hasher := NewBar(seed)
+	for n := 0; n < b.N; n++ {
+		hasher.HashBytes(nextBytes)
+	}
+}
+
+func BenchmarkNew256(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+
+	hasher := sha256.New()
+	hasher.Write([]byte("1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZf"))
+	for n := 0; n < b.N; n++ {
+		hasher.Sum([]byte("PEf1"))
 	}
 }

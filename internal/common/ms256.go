@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"hash"
 	"reflect"
 	"unsafe"
 )
@@ -41,6 +42,40 @@ func (m *MultiStep256) Hash(hashStr string) (hashed string) {
 
 func (m *MultiStep256) Reset() {
 	m.buff.Truncate(m.seedLen)
+}
+
+func NewFoo(seed string) *Foo {
+	f := new(Foo)
+	f.hasher = sha256.New()
+	f.hasher.Write([]byte(seed))
+	return f
+}
+
+type Foo struct {
+	hasher hash.Hash
+}
+
+func (f *Foo) Hash(hashStr string) []byte {
+	return f.hasher.Sum([]byte(hashStr))
+}
+
+func NewBar(seed string) *Bar {
+	b := new(Bar)
+	b.hasher = sha256.New()
+	b.hasher.Write([]byte(seed))
+	return b
+}
+
+type Bar struct {
+	hasher hash.Hash
+}
+
+func (b *Bar) Hash(hashStr string) []byte {
+	return b.hasher.Sum([]byte(hashStr))
+}
+
+func (b *Bar) HashBytes(hashBytes []byte) []byte {
+	return b.hasher.Sum(hashBytes)
 }
 
 func BytesToString(bytes []byte) string {
