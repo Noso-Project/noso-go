@@ -1,0 +1,69 @@
+package common
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"testing"
+)
+
+// 2022/01/03 07:34:34 <- JOINOK N6VxgLSpbni8kLbyUAjYXdHCPt2VEp 3p0000000 PoolData 39324 6E4A93F0F266B2352F71F41461BC1F00 12 0 111 0 -30 19892 3
+// ************* SeedFullBytes is: [51 112 48 48 48 48 48 48 48 78 54 86 120 103 76 83 112 98 110 105 56 107 76 98 121 85 65 106 89 88 100 72 67 80 116 50 86 69 112 49 49 48 48 49]
+// ************* SeedFullBytes is: 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001
+// ************* buff is         : 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001
+// ************* seedLen is      : 44
+// ************* buff is        : 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010000
+// ************* buff.Bytes() is: [51 112 48 48 48 48 48 48 48 78 54 86 120 103 76 83 112 98 110 105 56 107 76 98 121 85 65 106 89 88 100 72 67 80 116 50 86 69 112 49 49 48 48 49 48 48 48 48]
+// ************* buff.Bytes() is: 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010000
+// ************* encoded is     : [53 97 53 53 50 52 52 57 97 57 98 55 50 57 52 51 57 56 57 97 102 99 51 53 99 50 54 52 49 100 55 97 101 50 101 50 56 54 51 48 54 51 49 57 49 101 49 51 50 100 57 100 48 100 102 49 54 52 101 53 48 52 49 52]
+// ************* encoded is     : 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+// ************* val is         : 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+// ************* val is         : 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+// ************* buff is        : 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010001
+// ************* buff.Bytes() is: [51 112 48 48 48 48 48 48 48 78 54 86 120 103 76 83 112 98 110 105 56 107 76 98 121 85 65 106 89 88 100 72 67 80 116 50 86 69 112 49 49 48 48 49 48 48 48 49]
+// ************* buff.Bytes() is: 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010001
+// ************* encoded is     : [48 102 50 56 100 57 102 54 51 99 49 57 53 51 54 56 56 57 98 48 52 56 97 53 99 97 54 102 97 101 51 55 51 55 50 53 57 54 102 53 98 52 98 51 101 102 57 57 102 101 98 98 101 52 52 54 97 55 97 101 52 100 97 56]
+// ************* encoded is     : 0f28d9f63c19536889b048a5ca6fae37372596f5b4b3ef99febbe446a7ae4da8
+// ************* val is         : 0f28d9f63c19536889b048a5ca6fae37372596f5b4b3ef99febbe446a7ae4da8
+// ************* val is         : 0f28d9f63c19536889b048a5ca6fae37372596f5b4b3ef99febbe446a7ae4da8
+// ************* buff is        : 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010002
+// ************* buff.Bytes() is: [51 112 48 48 48 48 48 48 48 78 54 86 120 103 76 83 112 98 110 105 56 107 76 98 121 85 65 106 89 88 100 72 67 80 116 50 86 69 112 49 49 48 48 49 48 48 48 50]
+// ************* buff.Bytes() is: 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010002
+// ************* encoded is     : [102 57 51 53 55 102 52 52 48 102 54 98 56 98 97 98 52 99 51 54 98 50 98 53 50 55 52 56 97 56 99 54 99 100 100 100 50 56 52 52 52 97 53 50 51 51 102 50 48 98 102 99 56 98 49 98 100 56 54 53 48 99 52 51]
+// ************* encoded is     : f9357f440f6b8bab4c36b2b52748a8c6cddd28444a5233f20bfc8b1bd8650c43
+// ************* val is         : f9357f440f6b8bab4c36b2b52748a8c6cddd28444a5233f20bfc8b1bd8650c43
+// ************* val is         : f9357f440f6b8bab4c36b2b52748a8c6cddd28444a5233f20bfc8b1bd8650c43
+// ************* buff is        : 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010003
+// ************* buff.Bytes() is: [51 112 48 48 48 48 48 48 48 78 54 86 120 103 76 83 112 98 110 105 56 107 76 98 121 85 65 106 89 88 100 72 67 80 116 50 86 69 112 49 49 48 48 49 48 48 48 51]
+// ************* buff.Bytes() is: 3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010003
+
+func TestMultiStep256(t *testing.T) {
+	t.Run("working ugly basic example", func(t *testing.T) {
+		var tmp [32]byte
+		var val string
+		encoded := make([]byte, 64)
+		seed := []byte("3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp110010000")
+		buff := bytes.NewBuffer(seed)
+		// seedLen := buff.Len()
+		tmp = sha256.Sum256(buff.Bytes())
+		hex.Encode(encoded, tmp[:])
+		val = BytesToString(encoded)
+		// hasher := NewMultiStep256()
+		got := val
+		want := "5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414"
+
+		if got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
+	})
+	t.Run("real example", func(t *testing.T) {
+		seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+		hasher := NewMultiStep256(seed)
+		got := hasher.Hash("0000")
+		want := "5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414"
+
+		if got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
+	})
+}
