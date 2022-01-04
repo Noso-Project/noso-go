@@ -33,14 +33,6 @@ func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Clie
 	// TODO: need to formalize done channels throughout
 	// TODO: need to pass in poolPassword and walletAddress
 	InitLogger(os.Stdout)
-	msg := `
-# ##############################################################################
-#
-# New run started at %s
-#
-# ##############################################################################`
-
-	logger.Infof(msg, time.Now())
 	client = &Client{
 		parentCtx:       ctx,
 		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
@@ -57,7 +49,36 @@ func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Clie
 
 	started := make(chan struct{}, 0)
 	logger.Debug("Client starting")
-	go client.start(started)
+	go client.start(started, true)
+
+	// TODO: Need to protect this with select and return err
+	<-started
+	logger.Debug("Client started")
+
+	return client
+}
+
+func NewClientWithConn(ctx context.Context, conn net.Conn) (client *Client) {
+	InitLogger(os.Stdout)
+
+	client = &Client{
+		parentCtx:       ctx,
+		poolAddr:        net.JoinHostPort("", strconv.Itoa(0)),
+		auth:            "",
+		conn:            conn,
+		mu:              new(sync.Mutex),
+		sendStream:      make(chan string, 0),
+		doConnect:       make(chan struct{}),
+		doConnectErr:    make(chan error),
+		connTimeout:     ConnectTimeout,
+		deadlineTimeout: DeadlineExceededTimeout,
+		joinTimeout:     JoinTimeout,
+		pingInterval:    PingInterval,
+	}
+
+	started := make(chan struct{}, 0)
+	logger.Debug("Client starting")
+	go client.start(started, false)
 
 	// TODO: Need to protect this with select and return err
 	<-started
@@ -104,7 +125,7 @@ func (c *Client) init() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-func (c *Client) start(started chan struct{}) {
+func (c *Client) start(started chan struct{}, withConn bool) {
 	var wg sync.WaitGroup
 	var once sync.Once
 
@@ -125,25 +146,27 @@ func (c *Client) start(started chan struct{}) {
 
 		once.Do(func() { close(started) })
 
-		// Wait for trigger to connect from Connect() method
-		<-c.doConnect
-		err := c.connect()
-		if err != nil {
-			switch err.(error) {
-			case ErrAlreadyConnected:
-				cancel()
-				continue
-			default:
-				select {
-				case c.doConnectErr <- err:
+		if withConn == true {
+			// Wait for trigger to connect from Connect() method
+			<-c.doConnect
+			err := c.connect()
+			if err != nil {
+				switch err.(error) {
+				case ErrAlreadyConnected:
+					cancel()
+					continue
 				default:
-					logger.Panic(err)
+					select {
+					case c.doConnectErr <- err:
+					default:
+						logger.Panic(err)
+					}
 				}
-			}
-		} else {
-			select {
-			case c.doConnectErr <- nil:
-			default:
+			} else {
+				select {
+				case c.doConnectErr <- nil:
+				default:
+				}
 			}
 		}
 
