@@ -555,6 +555,45 @@ func TestClientMessaging(t *testing.T) {
 			t.Errorf("Timed out waiting for server StepOk")
 		}
 	})
+	t.Run("publish solution", func(t *testing.T) {
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
+
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		solStream, err := client.Subscribe(SolutionTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
+		defer client.Unsubscribe(solStream)
+
+		client.Publish(Solution{
+			Block:     12345,
+			Seed:      "seedstring",
+			HashStr:   "hashstring",
+			TargetLen: 54321,
+		})
+
+		select {
+		case sol := <-solStream:
+			switch sol.(type) {
+			case Solution:
+				got := sol.(Solution).Block
+				want := 12345
+
+				if got != want {
+					t.Errorf("got %d, want %d", got, want)
+				}
+			default:
+				t.Errorf("Expected Solution msg, but got %v", sol)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for server StepOk")
+		}
+	})
 }
 
 func BenchmarkSend(b *testing.B) {

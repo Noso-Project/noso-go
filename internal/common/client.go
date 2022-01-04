@@ -249,6 +249,17 @@ func (c *Client) Send(msg string) {
 }
 
 // TODO: Really shouldn't use chan interface{} here
+func (c *Client) Publish(pub interface{}) {
+	// TODO: There is an expectation here that Subscribe blocks
+	//       until we are actually subscribed
+	c.mu.Lock()
+	logger.Debug("Publish() has the lock")
+	defer logger.Debug("Publish() released the lock")
+	defer c.mu.Unlock()
+	c.broker.Publish(pub)
+}
+
+// TODO: Really shouldn't use chan interface{} here
 func (c *Client) Subscribe(topic Topic) (<-chan interface{}, error) {
 	// TODO: There is an expectation here that Subscribe blocks
 	//       until we are actually subscribed

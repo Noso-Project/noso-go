@@ -2,6 +2,7 @@ package common
 
 import (
 	"io"
+	"os"
 	"time"
 
 	"github.com/natefinch/lumberjack"
@@ -15,6 +16,9 @@ var logWriter io.Writer
 func InitLogger(w io.Writer) {
 	// TODO: Add Production, Development, and Test loggers
 	// TODO: Make custom logger that includes includes calling function in log for Dev/Test loggers
+	if logWriter == nil {
+		logWriter = os.Stdout
+	}
 	if logger == nil {
 		writeSyncer := getLogWriter()
 		encoder := getEncoder()
