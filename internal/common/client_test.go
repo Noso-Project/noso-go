@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -12,13 +13,13 @@ const (
 	DUMMYPORT = 12345
 )
 
-func getClientSvr(t testing.TB) (*Client, *TcpServer, chan struct{}) {
-	done := make(chan struct{}, 0)
+func GetFixtures(t testing.TB) (*Client, *TcpServer, context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
 	r := make(respMap)
-	svr := NewTcpServer(done, t, r)
-	client := NewClient(done, svr.Host, svr.Port)
+	svr := NewTcpServer(ctx, t, r)
+	client := NewClient(ctx, svr.Host, svr.Port)
 
-	return client, svr, done
+	return client, svr, ctx, cancel
 }
 
 // TODO: Remove this if we no longer need it
@@ -29,9 +30,9 @@ func getClientSvr(t testing.TB) (*Client, *TcpServer, chan struct{}) {
 
 func TestClientConnect(t *testing.T) {
 	t.Run("new client", func(t *testing.T) {
-		done := make(chan struct{}, 0)
-		defer close(done)
-		got := NewClient(done, DUMMYADDR, DUMMYPORT).poolAddr
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		got := NewClient(ctx, DUMMYADDR, DUMMYPORT).poolAddr
 		want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
 
 		if got != want {
@@ -39,8 +40,8 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("connect refused", func(t *testing.T) {
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 		svr.Close()
 
 		err := client.Connect()
@@ -57,8 +58,8 @@ func TestClientConnect(t *testing.T) {
 		ConnectTimeout = 1 * time.Nanosecond
 		defer func() { ConnectTimeout = oldTimeout }()
 
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 		svr.Close()
 
 		err := client.Connect()
@@ -71,8 +72,8 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("connect successful", func(t *testing.T) {
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		err := client.Connect()
 		if err != nil {
@@ -86,8 +87,8 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("join successful", func(t *testing.T) {
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		err := client.Connect()
 		if err != nil {
@@ -101,9 +102,10 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("join with bad password", func(t *testing.T) {
-		client, svr, done := getClientSvr(t)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
+
 		svr.rMap[JOIN] = []string{PASSFAILED_default}
-		defer close(done)
 
 		joinStream, err := client.Subscribe(JoinTopic)
 		if err != nil {
@@ -136,8 +138,8 @@ func TestClientConnect(t *testing.T) {
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
 
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		svr.printConnErr = false
 
@@ -212,8 +214,8 @@ func TestClientConnect(t *testing.T) {
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
 
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		svr.printConnErr = false
 
@@ -282,9 +284,10 @@ func TestClientConnect(t *testing.T) {
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
 
-		client, svr, done := getClientSvr(t)
+		client, svr, ctx, cancel := GetFixtures(t)
+		defer cancel()
+
 		svr.rMap[JOIN] = []string{ALREADYCONNECTED_default, JOINOK_default}
-		defer close(done)
 
 		svr.printConnErr = false
 
@@ -299,7 +302,7 @@ func TestClientConnect(t *testing.T) {
 		go func() {
 			defer close(joinPassthroughStream)
 			select {
-			case <-done:
+			case <-ctx.Done():
 				return
 			case joinPassthroughStream <- <-joinStream:
 			}
@@ -365,8 +368,8 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		err := client.Connect()
 		if err != nil {
@@ -391,8 +394,8 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
 		err := client.Connect()
@@ -413,8 +416,8 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("pooldata from joinOk", func(t *testing.T) {
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		poolDataStream, err := client.Subscribe(PoolDataTopic)
 		if err != nil {
@@ -449,8 +452,8 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		poolDataStream, err := client.Subscribe(PoolDataTopic)
 		if err != nil {
@@ -485,8 +488,8 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, svr, done := getClientSvr(t)
-		defer close(done)
+		client, svr, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
 
@@ -519,8 +522,8 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("step and stepOk", func(t *testing.T) {
-		client, _, done := getClientSvr(t)
-		defer close(done)
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
 
 		err := client.Connect()
 		if err != nil {
@@ -556,8 +559,9 @@ func TestClientMessaging(t *testing.T) {
 
 func BenchmarkSend(b *testing.B) {
 	b.Logf("b.N is: %d\n", b.N)
-	client, svr, done := getClientSvr(b)
-	defer close(done)
+	client, svr, _, cancel := GetFixtures(b)
+	defer cancel()
+
 	svr.printConnErr = false
 	pingStream, err := client.Subscribe(PingPongTopic)
 	if err != nil {
@@ -585,8 +589,8 @@ func BenchmarkSend(b *testing.B) {
 }
 
 func BenchmarkSendParallel(b *testing.B) {
-	client, svr, done := getClientSvr(b)
-	defer close(done)
+	client, svr, _, cancel := GetFixtures(b)
+	defer cancel()
 	svr.printConnErr = false
 	pingStream, err := client.Subscribe(PingPongTopic)
 	if err != nil {
@@ -627,7 +631,7 @@ func BenchmarkSendParallel(b *testing.B) {
 // 	var err error
 // 	for n := 0; n < b.N; n++ {
 // 		func() {
-// 			client, svr, done := getClientSvr(b)
+// 			client, svr, done := GetFixtures(b)
 // 			defer close(done)
 // 			svr.printConnErr = false
 // 			err = client.Connect()

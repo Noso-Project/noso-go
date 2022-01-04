@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -21,8 +22,9 @@ var defaultRespMap = respMap{
 	STEP: []string{STEPOK_default},
 }
 
-func NewTcpServer(done chan struct{}, t testing.TB, r respMap) *TcpServer {
+func NewTcpServer(ctx context.Context, t testing.TB, r respMap) *TcpServer {
 	svr := new(TcpServer)
+	svr.ctx = ctx
 	svr.rMap = r
 	svr.printConnErr = true
 
@@ -34,7 +36,6 @@ func NewTcpServer(done chan struct{}, t testing.TB, r respMap) *TcpServer {
 
 	svr.listener = l
 	svr.addr = svr.listener.Addr().String()
-	svr.done = done
 
 	host, port, err := net.SplitHostPort(svr.addr)
 
@@ -56,10 +57,10 @@ func NewTcpServer(done chan struct{}, t testing.TB, r respMap) *TcpServer {
 }
 
 type TcpServer struct {
+	ctx          context.Context
 	addr         string
 	Host         string
 	Port         int
-	done         chan struct{}
 	listener     net.Listener
 	conn         net.Conn
 	rMap         respMap
@@ -68,7 +69,7 @@ type TcpServer struct {
 
 func (t *TcpServer) stop() {
 	select {
-	case <-t.done:
+	case <-t.ctx.Done():
 		t.Close()
 	}
 	return
@@ -77,9 +78,13 @@ func (t *TcpServer) stop() {
 func (t *TcpServer) Start(wg *sync.WaitGroup) (err error) {
 	var reqType ServerMessageType
 	wg.Done()
-	// TODO: need to incorporate either a done channel or context
 	respCount := 0
 	for {
+		select {
+		case <-t.ctx.Done():
+			return nil
+		default:
+		}
 		// logger.Debug("Waiting for new connection")
 		t.conn, err = t.listener.Accept()
 		if err != nil {

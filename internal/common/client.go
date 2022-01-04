@@ -29,7 +29,7 @@ var (
 	ErrAlreadyConnected = errors.New("Failed to join pool: already connected")
 )
 
-func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Client) {
+func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
 	// TODO: need to pass in poolPassword and walletAddress
 	InitLogger(os.Stdout)
@@ -42,7 +42,7 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 
 	logger.Infof(msg, time.Now())
 	client = &Client{
-		done:            done,
+		parentCtx:       ctx,
 		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
 		auth:            "password leviable6",
 		mu:              new(sync.Mutex),
@@ -69,7 +69,7 @@ func NewClient(done chan struct{}, poolAddr string, poolPort int) (client *Clien
 type Client struct {
 	// TODO: Evaluate using a context instead of done channel
 	// TODO: Set auth
-	done         chan struct{}
+	parentCtx    context.Context
 	poolAddr     string
 	auth         string // "poolPw walletAddr"
 	conn         net.Conn
@@ -94,7 +94,7 @@ func (c *Client) init() (context.Context, context.CancelFunc) {
 	logger.Debug("init() has the lock")
 	defer logger.Debug("init() released the lock")
 	defer c.mu.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(c.parentCtx)
 	c.connected = make(chan struct{}, 0)
 	c.joined = make(chan struct{}, 0)
 	c.broker = NewBroker(ctx, cancel)
@@ -148,8 +148,8 @@ func (c *Client) start(started chan struct{}) {
 		}
 
 		select {
-		case <-c.done:
-			logger.Debug("<-c.done closed")
+		case <-c.parentCtx.Done():
+			logger.Debug("<-parentCtx.Done() closed")
 			cancel()
 			return
 		case <-ctx.Done():
@@ -178,10 +178,9 @@ func (c *Client) Joined() chan struct{} {
 	defer c.mu.Unlock()
 	return c.joined
 }
-func (c *Client) Connect() (err error) {
+func (c *Client) Connect() error {
 	close(c.doConnect)
-	err = <-c.doConnectErr
-	return err
+	return <-c.doConnectErr
 }
 
 func (c *Client) connect() (err error) {
@@ -240,10 +239,11 @@ func (c *Client) Send(msg string) {
 	go func(msg string) {
 		// TODO: Should I make this timeout? Or use a context deadline?
 		select {
-		case <-c.done:
-			logger.Debug("<-c.done executing")
+		case <-c.parentCtx.Done():
+			logger.Debug("<-c.parentCtx.Done() closed")
+			return
 		case c.sendStream <- msg:
-			logger.Debugf("Sending %s to %v", msg, c.sendStream)
+			logger.Debugf("Sent %s to %v", msg, c.sendStream)
 		}
 	}(msg)
 }

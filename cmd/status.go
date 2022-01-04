@@ -27,7 +27,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Noso-Project/noso-go/internal/miner"
+	"github.com/Noso-Project/noso-go/internal/miner-bak"
 	"github.com/spf13/cobra"
 )
 
