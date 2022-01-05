@@ -39,14 +39,15 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 	}
 	defer client.Unsubscribe(poolDataStream)
 
+	// TODO: This is here because the JobManager needs to be listening to JobTopic
+	//       stream before JoinOk is received. Should probably do this another way
 	wg.Done()
 
-	// time.Sleep(time.Second)
-	// // Leave jStream nil until we get our first PoolData msg
+	// Leave these channels nil until we get our first PoolData msg
 	var jStream, nJob chan common.Job
 	jStream, nJob = nil, nil
-	// var once sync.Once
 	var job common.Job
+
 loop:
 	for {
 		select {
@@ -59,23 +60,22 @@ loop:
 			jStream = nil
 			nJob = builder.nextJob
 		case poolDataMsg := <-poolDataStream:
-			// TODO: Only care about POOLSTEPS or JOINOK, can discard PONG
 			switch poolDataMsg.(type) {
 			case common.Pong:
 				continue loop
 			}
-			// fmt.Printf("Got data from poolDataStream: %v\n", poolDataMsg)
 			resp := builder.Update(poolDataMsg)
+			// TODO: likely bug here on client reconnect/rejoin
 			if resp == common.JOINOK {
 				nJob = builder.nextJob
 			}
 
 		case jobTopicMsg := <-jobTopicStream:
-			// fmt.Printf("Got jobTopic from jobTopicStream: %v\n", jobTopicMsg.(common.JobStreamReq))
 			func(stream <-chan common.Job) {
 				select {
 				case <-ctx.Done():
 					return
+				// TODO: Deadlock/Livelock possible, probably need to timeout here
 				case jobTopicMsg.(common.JobStreamReq).Stream <- stream:
 				}
 			}(jobStream)
@@ -85,8 +85,9 @@ loop:
 
 func newJobBuilder(ctx context.Context) (j *jobBuilder) {
 	j = new(jobBuilder)
-	j.ready = make(chan struct{}, 0)
+	j.joined = make(chan struct{}, 0)
 	j.nextJob = make(chan common.Job, 0)
+	j.mu = new(sync.Mutex)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -97,7 +98,7 @@ func newJobBuilder(ctx context.Context) (j *jobBuilder) {
 }
 
 type jobBuilder struct {
-	ready        chan struct{}
+	joined       chan struct{}
 	nextJob      chan common.Job
 	poolAddr     string
 	seedFromPool string
@@ -107,6 +108,7 @@ type jobBuilder struct {
 	block        int
 	step         int
 	poolDepth    int
+	mu           *sync.Mutex
 }
 
 func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
@@ -114,39 +116,33 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 
 	wg.Done()
 
-	// Wait for a JoinOk
-	<-j.ready
+	// Wait for the manager to receive and process a JoinOk
+	<-j.joined
 
+	// Rough approach for including the noso-go version within the hash
+	// string that is ultimately written to the blockchain
+	// If not an official build, this should be "11"
 	verSha := sha256.Sum256([]byte(common.MinerName))
 	verShaHex := hex.EncodeToString(verSha[:])
 	ver := verShaHex[:2]
 
 	// TODO: push seed char generation into it's own goroutine
-	// Randomize seed chars so that if a miner restarts in the middle of a block,
-	// it isn't rehashing already hashed values
-	seedChars := []rune(hashableSeedChars)
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(seedChars), func(i, j int) { seedChars[i], seedChars[j] = seedChars[j], seedChars[i] })
+
+	seedPostfixStream := make(chan string, 0)
+	go seedCharGen(ctx, seedPostfixStream)
 
 	for {
-		for _, x := range seedChars {
-			for _, y := range seedChars {
-				for _, z := range seedChars {
+		seedBase := j.seedFromPool[:len(j.seedFromPool)-3]
+		seed := fmt.Sprintf("%s%s", seedBase, <-seedPostfixStream)
 
-					seedBase := j.seedFromPool[:len(j.seedFromPool)-3]
-					seed := fmt.Sprintf("%s%c%c%c", seedBase, x, y, z)
-
-					for num := 1; num < 999; num++ {
-						postfix := ver + fmt.Sprintf("%03d", num)
-						fullSeed := seed + j.poolAddr + postfix
-						job = j.newJob(seed, fullSeed)
-						select {
-						case j.nextJob <- job:
-						case <-ctx.Done():
-							return
-						}
-					}
-				}
+		for num := 1; num < 999; num++ {
+			postfix := ver + fmt.Sprintf("%03d", num)
+			fullSeed := seed + j.poolAddr + postfix
+			job = j.newJob(seed, fullSeed)
+			select {
+			case j.nextJob <- job:
+			case <-ctx.Done():
+				return
 			}
 		}
 	}
@@ -154,6 +150,8 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 
 func (j *jobBuilder) newJob(minerSeedBase, minerSeed string) common.Job {
 	// fmt.Println("newJob() Called")
+	j.mu.Lock()
+	defer j.mu.Unlock()
 	return common.Job{
 		PoolAddr:      j.poolAddr,
 		MinerSeedBase: minerSeedBase,
@@ -167,7 +165,7 @@ func (j *jobBuilder) newJob(minerSeedBase, minerSeed string) common.Job {
 	}
 }
 
-// Example job from 1.6.3
+// Example job from 1.6.2
 // PoolAddr:N6VxgLSpbni8kLbyUAjYXdHCPt2VEp
 // SeedMiner:3Q0000###
 // SeedPostfix:11001
@@ -184,6 +182,8 @@ func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
 	// fmt.Println("Updated() Called")
 	switch poolData.(type) {
 	case common.JoinOk:
+		j.mu.Lock()
+		defer j.mu.Unlock()
 		j.poolAddr = poolData.(common.JoinOk).PoolAddr
 		j.seedFromPool = poolData.(common.JoinOk).MinerSeed
 		j.targetString = poolData.(common.JoinOk).TargetHash
@@ -192,9 +192,11 @@ func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
 		j.block = poolData.(common.JoinOk).Block
 		j.step = poolData.(common.JoinOk).CurrentStep
 		j.poolDepth = poolData.(common.JoinOk).PoolDepth
-		close(j.ready)
+		close(j.joined)
 		return common.JOINOK
 	case common.PoolSteps:
+		j.mu.Lock()
+		defer j.mu.Unlock()
 		j.targetString = poolData.(common.PoolSteps).TargetHash
 		j.targetChars = poolData.(common.PoolSteps).TargetLen
 		j.diff = poolData.(common.PoolSteps).Difficulty
@@ -204,6 +206,29 @@ func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
 		return common.POOLSTEPS
 	}
 	return common.OTHER
+}
+
+func seedCharGen(ctx context.Context, stream chan string) {
+
+	// Randomize seed chars so that if a miner restarts in the middle of a block,
+	// it isn't rehashing already hashed values
+	seedChars := []rune(hashableSeedChars)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(seedChars), func(i, j int) { seedChars[i], seedChars[j] = seedChars[j], seedChars[i] })
+
+	for {
+		for _, x := range seedChars {
+			for _, y := range seedChars {
+				for _, z := range seedChars {
+					select {
+					case <-ctx.Done():
+						return
+					case stream <- fmt.Sprintf("%c%c%c", x, y, z):
+					}
+				}
+			}
+		}
+	}
 }
 
 func requestJobStream(ctx context.Context, client *common.Client) <-chan common.Job {

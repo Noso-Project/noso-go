@@ -99,7 +99,9 @@ unit-tests:
 	$(gotest) -v -race -cover -timeout 10s ./...
 
 .PHONY: benchmarks
-benchmarks: benchmark-send benchmark-sendparallel benchmark-msbasic benchmark-msfast
+benchmarks: benchmark-send benchmark-sendparallel benchmark-msbasic benchmark-msfast benchmark-jobmanager benchmark-solutionmanager
+
+RACE ?= -race
 
 .PHONY: benchmark-%
 benchmark-%:
@@ -108,7 +110,7 @@ benchmark-%:
 	#         (?i) makes it case insensitive
 	#         $* matches the % in benchmark-%
 	#         $$ is make's version of an escaped $
-	$(gotest) -run=XXX -bench "(?i)$*$$" -benchtime 5s -count 1 -v -race  ./... -cpu=1,2
+	$(gotest) -run=XXX -bench "(?i)$*$$" -benchtime 5s -count 1 -v $(RACE)  ./... -cpu=1,2
 
 .PHONY: clean
 clean:
