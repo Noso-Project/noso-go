@@ -44,6 +44,7 @@ const (
 	ALREADYCONNECTED
 	STEP
 	STEPOK
+	OTHER
 )
 
 type ServerMessage interface {
@@ -58,159 +59,159 @@ func (s serverMessage) GetMsgType() ServerMessageType {
 	return s.MsgType
 }
 
-type joinOk struct {
+type JoinOk struct {
 	serverMessage
-	poolAddr          string
-	minerSeed         string
-	block             int
-	targetHash        string
-	targetLen         int
-	currentStep       int
-	difficulty        int
-	poolBalance       string
-	blocksTillPayment int
-	poolHashrate      int
-	poolDepth         int
+	PoolAddr          string
+	MinerSeed         string
+	Block             int
+	TargetHash        string
+	TargetLen         int
+	CurrentStep       int
+	Difficulty        int
+	PoolBalance       string
+	BlocksTillPayment int
+	PoolHashrate      int
+	PoolDepth         int
 }
 
-func newJoinOk(msg []string) (message joinOk) {
+func newJoinOk(msg []string) (message JoinOk) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = joinOk{}
+	message = JoinOk{}
 	message.MsgType = JOINOK
-	message.poolAddr = msg[1]
-	message.minerSeed = msg[2]
+	message.PoolAddr = msg[1]
+	message.MinerSeed = msg[2]
 	block, _ := strconv.Atoi(msg[4])
-	message.block = block
-	message.targetHash = msg[5]
+	message.Block = block
+	message.TargetHash = msg[5]
 	targetLen, _ := strconv.Atoi(msg[6])
-	message.targetLen = targetLen
+	message.TargetLen = targetLen
 	step, _ := strconv.Atoi(msg[7])
-	message.currentStep = step
+	message.CurrentStep = step
 	diff, _ := strconv.Atoi(msg[8])
-	message.difficulty = diff
-	message.poolBalance = msg[9]
+	message.Difficulty = diff
+	message.PoolBalance = msg[9]
 	blocksTill, _ := strconv.Atoi(msg[10])
-	message.blocksTillPayment = blocksTill
+	message.BlocksTillPayment = blocksTill
 	poolHR, _ := strconv.Atoi(msg[11])
-	message.poolHashrate = poolHR
+	message.PoolHashrate = poolHR
 	depth, _ := strconv.Atoi(msg[12])
-	message.poolDepth = depth
+	message.PoolDepth = depth
 
 	return message
 }
 
-type pong struct {
+type Pong struct {
 	serverMessage
-	block             int
-	targetHash        string
-	targetLen         int
-	currentStep       int
-	difficulty        int
-	poolBalance       string
-	blocksTillPayment int
-	poolHashrate      int
-	poolDepth         int
+	Block             int
+	TargetHash        string
+	TargetLen         int
+	CurrentStep       int
+	Difficulty        int
+	PoolBalance       string
+	BlocksTillPayment int
+	PoolHashrate      int
+	PoolDepth         int
 }
 
-func newPong(msg []string) (message pong) {
+func newPong(msg []string) (message Pong) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = pong{}
+	message = Pong{}
 	message.MsgType = PONG
 	block, _ := strconv.Atoi(msg[2])
-	message.block = block
-	message.targetHash = msg[3]
+	message.Block = block
+	message.TargetHash = msg[3]
 	targetLen, _ := strconv.Atoi(msg[4])
-	message.targetLen = targetLen
+	message.TargetLen = targetLen
 	step, _ := strconv.Atoi(msg[5])
-	message.currentStep = step
+	message.CurrentStep = step
 	diff, _ := strconv.Atoi(msg[6])
-	message.difficulty = diff
-	message.poolBalance = msg[7]
+	message.Difficulty = diff
+	message.PoolBalance = msg[7]
 	blocksTill, _ := strconv.Atoi(msg[8])
-	message.blocksTillPayment = blocksTill
+	message.BlocksTillPayment = blocksTill
 	poolHR, _ := strconv.Atoi(msg[9])
-	message.poolHashrate = poolHR
+	message.PoolHashrate = poolHR
 	depth, _ := strconv.Atoi(msg[10])
-	message.poolDepth = depth
+	message.PoolDepth = depth
 
 	return message
 }
 
-type poolSteps struct {
+type PoolSteps struct {
 	serverMessage
-	block             int
-	targetHash        string
-	targetLen         int
-	currentStep       int
-	difficulty        int
-	poolBalance       string
-	blocksTillPayment int
-	poolHashrate      int
-	poolDepth         int
+	Block             int
+	TargetHash        string
+	TargetLen         int
+	CurrentStep       int
+	Difficulty        int
+	PoolBalance       string
+	BlocksTillPayment int
+	PoolHashrate      int
+	PoolDepth         int
 }
 
-func newPoolSteps(msg []string) (message poolSteps) {
+func newPoolSteps(msg []string) (message PoolSteps) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = poolSteps{}
+	message = PoolSteps{}
 	message.MsgType = POOLSTEPS
 	block, _ := strconv.Atoi(msg[2])
-	message.block = block
-	message.targetHash = msg[3]
+	message.Block = block
+	message.TargetHash = msg[3]
 	targetLen, _ := strconv.Atoi(msg[4])
-	message.targetLen = targetLen
+	message.TargetLen = targetLen
 	step, _ := strconv.Atoi(msg[5])
-	message.currentStep = step
+	message.CurrentStep = step
 	diff, _ := strconv.Atoi(msg[6])
-	message.difficulty = diff
-	message.poolBalance = msg[7]
+	message.Difficulty = diff
+	message.PoolBalance = msg[7]
 	blocksTill, _ := strconv.Atoi(msg[8])
-	message.blocksTillPayment = blocksTill
+	message.BlocksTillPayment = blocksTill
 	poolHR, _ := strconv.Atoi(msg[9])
-	message.poolHashrate = poolHR
+	message.PoolHashrate = poolHR
 	depth, _ := strconv.Atoi(msg[10])
-	message.poolDepth = depth
+	message.PoolDepth = depth
 
 	return message
 }
 
-type passFailed struct {
+type PassFailed struct {
 	serverMessage
 }
 
-func newPassFailed(msg []string) (message passFailed) {
+func newPassFailed(msg []string) (message PassFailed) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = passFailed{}
+	message = PassFailed{}
 	message.MsgType = PASSFAILED
 
 	return message
 }
 
-type alreadyConnected struct {
+type AlreadyConnected struct {
 	serverMessage
 }
 
-func newAlreadyConnected(msg []string) (message alreadyConnected) {
+func newAlreadyConnected(msg []string) (message AlreadyConnected) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = alreadyConnected{}
+	message = AlreadyConnected{}
 	message.MsgType = ALREADYCONNECTED
 
 	return message
 }
 
-type stepOk struct {
+type StepOk struct {
 	serverMessage
 	PopValue int
 }
 
-func newStepOk(msg []string) (message stepOk) {
+func newStepOk(msg []string) (message StepOk) {
 	// TODO: Handle strconv errors
 	// TODO: Check msg has expected len before indexing
-	message = stepOk{}
+	message = StepOk{}
 	message.MsgType = STEPOK
 	popValue, _ := strconv.Atoi(msg[1])
 	message.PopValue = popValue

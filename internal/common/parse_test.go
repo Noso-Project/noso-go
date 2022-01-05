@@ -44,17 +44,17 @@ func TestParse(t *testing.T) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 
-		assertMsgAttrs(t, resp.(joinOk).poolAddr, "N6VxgLSpbni8kLbyUAjYXdHCPt2VEp")
-		assertMsgAttrs(t, resp.(joinOk).minerSeed, "020000000")
-		assertMsgAttrs(t, resp.(joinOk).block, 37873)
-		assertMsgAttrs(t, resp.(joinOk).targetHash, "E1151A4F79E6394F6897A913ADCD476B")
-		assertMsgAttrs(t, resp.(joinOk).targetLen, 11)
-		assertMsgAttrs(t, resp.(joinOk).currentStep, 0)
-		assertMsgAttrs(t, resp.(joinOk).difficulty, 102)
-		assertMsgAttrs(t, resp.(joinOk).poolBalance, "0")
-		assertMsgAttrs(t, resp.(joinOk).blocksTillPayment, -30)
-		assertMsgAttrs(t, resp.(joinOk).poolHashrate, 42270)
-		assertMsgAttrs(t, resp.(joinOk).poolDepth, 3)
+		assertMsgAttrs(t, resp.(JoinOk).PoolAddr, "N6VxgLSpbni8kLbyUAjYXdHCPt2VEp")
+		assertMsgAttrs(t, resp.(JoinOk).MinerSeed, "020000000")
+		assertMsgAttrs(t, resp.(JoinOk).Block, 37873)
+		assertMsgAttrs(t, resp.(JoinOk).TargetHash, "E1151A4F79E6394F6897A913ADCD476B")
+		assertMsgAttrs(t, resp.(JoinOk).TargetLen, 11)
+		assertMsgAttrs(t, resp.(JoinOk).CurrentStep, 0)
+		assertMsgAttrs(t, resp.(JoinOk).Difficulty, 102)
+		assertMsgAttrs(t, resp.(JoinOk).PoolBalance, "0")
+		assertMsgAttrs(t, resp.(JoinOk).BlocksTillPayment, -30)
+		assertMsgAttrs(t, resp.(JoinOk).PoolHashrate, 42270)
+		assertMsgAttrs(t, resp.(JoinOk).PoolDepth, 3)
 	})
 	t.Run("pong", func(t *testing.T) {
 		resp, err := parse(PONG_default)
@@ -70,15 +70,15 @@ func TestParse(t *testing.T) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 
-		assertMsgAttrs(t, resp.(pong).block, 37892)
-		assertMsgAttrs(t, resp.(pong).targetHash, "C74B9ABA60E2EE1B52613959D4F06876")
-		assertMsgAttrs(t, resp.(pong).targetLen, 11)
-		assertMsgAttrs(t, resp.(pong).currentStep, 0)
-		assertMsgAttrs(t, resp.(pong).difficulty, 105)
-		assertMsgAttrs(t, resp.(pong).poolBalance, "0")
-		assertMsgAttrs(t, resp.(pong).blocksTillPayment, -29)
-		assertMsgAttrs(t, resp.(pong).poolHashrate, 86070)
-		assertMsgAttrs(t, resp.(pong).poolDepth, 3)
+		assertMsgAttrs(t, resp.(Pong).Block, 37892)
+		assertMsgAttrs(t, resp.(Pong).TargetHash, "C74B9ABA60E2EE1B52613959D4F06876")
+		assertMsgAttrs(t, resp.(Pong).TargetLen, 11)
+		assertMsgAttrs(t, resp.(Pong).CurrentStep, 0)
+		assertMsgAttrs(t, resp.(Pong).Difficulty, 105)
+		assertMsgAttrs(t, resp.(Pong).PoolBalance, "0")
+		assertMsgAttrs(t, resp.(Pong).BlocksTillPayment, -29)
+		assertMsgAttrs(t, resp.(Pong).PoolHashrate, 86070)
+		assertMsgAttrs(t, resp.(Pong).PoolDepth, 3)
 	})
 	t.Run("poolSteps", func(t *testing.T) {
 		resp, err := parse(POOLSTEPS_default)
@@ -94,15 +94,15 @@ func TestParse(t *testing.T) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 
-		assertMsgAttrs(t, resp.(poolSteps).block, 38441)
-		assertMsgAttrs(t, resp.(poolSteps).targetHash, "AD23A982B87D193E8384EB50C3F0B50C")
-		assertMsgAttrs(t, resp.(poolSteps).targetLen, 11)
-		assertMsgAttrs(t, resp.(poolSteps).currentStep, 0)
-		assertMsgAttrs(t, resp.(poolSteps).difficulty, 106)
-		assertMsgAttrs(t, resp.(poolSteps).poolBalance, "0")
-		assertMsgAttrs(t, resp.(poolSteps).blocksTillPayment, -23)
-		assertMsgAttrs(t, resp.(poolSteps).poolHashrate, 43328)
-		assertMsgAttrs(t, resp.(poolSteps).poolDepth, 3)
+		assertMsgAttrs(t, resp.(PoolSteps).Block, 38441)
+		assertMsgAttrs(t, resp.(PoolSteps).TargetHash, "AD23A982B87D193E8384EB50C3F0B50C")
+		assertMsgAttrs(t, resp.(PoolSteps).TargetLen, 11)
+		assertMsgAttrs(t, resp.(PoolSteps).CurrentStep, 0)
+		assertMsgAttrs(t, resp.(PoolSteps).Difficulty, 106)
+		assertMsgAttrs(t, resp.(PoolSteps).PoolBalance, "0")
+		assertMsgAttrs(t, resp.(PoolSteps).BlocksTillPayment, -23)
+		assertMsgAttrs(t, resp.(PoolSteps).PoolHashrate, 43328)
+		assertMsgAttrs(t, resp.(PoolSteps).PoolDepth, 3)
 	})
 	t.Run("stepOk", func(t *testing.T) {
 		resp, err := parse(STEPOK_default)
@@ -118,7 +118,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 
-		assertMsgAttrs(t, resp.(stepOk).PopValue, 256)
+		assertMsgAttrs(t, resp.(StepOk).PopValue, 256)
 	})
 }
 

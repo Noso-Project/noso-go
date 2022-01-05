@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -121,7 +122,7 @@ func TestClientConnect(t *testing.T) {
 		select {
 		case got := <-joinStream:
 			switch got.(type) {
-			case passFailed:
+			case PassFailed:
 			default:
 				t.Errorf("got %v, want passFailed", got)
 			}
@@ -316,7 +317,7 @@ func TestClientConnect(t *testing.T) {
 		select {
 		case msg := <-joinPassthroughStream:
 			switch msg.(type) {
-			case alreadyConnected:
+			case AlreadyConnected:
 			default:
 				t.Fatal("Expected ALREADYCONNECTED, got: ", msg)
 			}
@@ -437,7 +438,7 @@ func TestClientMessaging(t *testing.T) {
 			select {
 			case msg := <-poolDataStream:
 				switch msg.(type) {
-				case joinOk:
+				case JoinOk:
 					break loop
 				default:
 					continue
@@ -473,7 +474,7 @@ func TestClientMessaging(t *testing.T) {
 			select {
 			case msg := <-poolDataStream:
 				switch msg.(type) {
-				case pong:
+				case Pong:
 					break loop
 				default:
 					continue
@@ -511,7 +512,7 @@ func TestClientMessaging(t *testing.T) {
 			select {
 			case msg := <-poolDataStream:
 				switch msg.(type) {
-				case poolSteps:
+				case PoolSteps:
 					break loop
 				default:
 					continue
@@ -541,8 +542,8 @@ func TestClientMessaging(t *testing.T) {
 		select {
 		case resp := <-stepOkStream:
 			switch resp.(type) {
-			case stepOk:
-				got := resp.(stepOk).PopValue
+			case StepOk:
+				got := resp.(StepOk).PopValue
 				want := 256
 
 				if got != want {
@@ -592,6 +593,51 @@ func TestClientMessaging(t *testing.T) {
 			}
 		case <-time.After(100 * time.Millisecond):
 			t.Errorf("Timed out waiting for server StepOk")
+		}
+	})
+	t.Run("publish job", func(t *testing.T) {
+		client, _, _, cancel := GetFixtures(t)
+		defer cancel()
+
+		err := client.Connect()
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one: ", err)
+		}
+
+		jobStream, err := client.Subscribe(JobTopic)
+		if err != nil {
+			t.Fatal("Got an error and didn't expect one:", err)
+		}
+		defer client.Unsubscribe(jobStream)
+
+		publishedJob := Job{
+			PoolAddr:      "pooladdr",
+			MinerSeedBase: "seedminer",
+			MinerSeed:     "seedpostfix",
+			TargetString:  "targetstring",
+			TargetChars:   11,
+			Diff:          111,
+			Block:         12345,
+			Step:          2,
+			PoolDepth:     3,
+		}
+		client.Publish(publishedJob)
+
+		select {
+		case job := <-jobStream:
+			switch job.(type) {
+			case Job:
+				got := job
+				want := publishedJob
+
+				if !reflect.DeepEqual(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+			default:
+				t.Errorf("Expected Job msg, but got %v", job)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("Timed out waiting for Job")
 		}
 	})
 }

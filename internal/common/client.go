@@ -82,6 +82,10 @@ func NewClientWithConn(ctx context.Context, conn net.Conn) (client *Client) {
 
 	// TODO: Need to protect this with select and return err
 	<-started
+
+	close(client.connected)
+	close(client.joined)
+
 	logger.Debug("Client started")
 
 	return client
@@ -238,8 +242,8 @@ func (c *Client) connect() (err error) {
 	case resp := <-joinStream:
 		logger.Debugf("JOIN resp: %s", resp)
 		switch resp.(type) {
-		case joinOk:
-		case alreadyConnected:
+		case JoinOk:
+		case AlreadyConnected:
 			return ErrAlreadyConnected
 		default:
 		}

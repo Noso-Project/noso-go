@@ -25,18 +25,21 @@ func (t Topic) String() string {
 		return "StepOkTopic"
 	case SolutionTopic:
 		return "SolutionTopic"
+	case JobTopic:
+		return "JobTopic"
 	default:
 		return fmt.Sprintf("%d (cant find string)", int(t))
 	}
 }
 
 const (
-	JoinTopic Topic = iota + 1
+	JobTopic Topic = iota + 1
+	JoinTopic
 	PingPongTopic
-	PoolStepsTopic
 	PoolDataTopic
-	StepOkTopic
+	PoolStepsTopic
 	SolutionTopic
+	StepOkTopic
 )
 
 var (
@@ -170,20 +173,24 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 
 func findTopics(msg interface{}) ([]Topic, error) {
 	switch msg.(type) {
-	case joinOk:
+	case JoinOk:
 		return []Topic{JoinTopic, PoolDataTopic}, nil
-	case passFailed:
+	case PassFailed:
 		return []Topic{JoinTopic}, nil
-	case alreadyConnected:
+	case AlreadyConnected:
 		return []Topic{JoinTopic}, nil
-	case pong:
+	case Pong:
 		return []Topic{PingPongTopic, PoolDataTopic}, nil
-	case poolSteps:
+	case PoolSteps:
 		return []Topic{PoolStepsTopic, PoolDataTopic}, nil
-	case stepOk:
+	case StepOk:
 		return []Topic{StepOkTopic}, nil
 	case Solution:
 		return []Topic{SolutionTopic}, nil
+	case Job:
+		return []Topic{JobTopic}, nil
+	case JobStreamReq:
+		return []Topic{JobTopic}, nil
 	default:
 		// TODO: Rethink how I'm doing this
 		logger.Debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
