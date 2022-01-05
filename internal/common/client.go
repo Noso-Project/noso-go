@@ -342,7 +342,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 			logger.Error("Received an unknown response: ", resp)
 		}
 		// logger.Debug("Parsed msg: ", msg)
-		c.broker.Publish(msg)
+		c.Publish(msg)
 	}
 
 	if err := scanner.Err(); err != nil {

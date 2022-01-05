@@ -52,7 +52,7 @@ var (
 // TODO: find a way to not use interface{} for the channel
 //       - Already boned on this once
 type Broker struct {
-	ctx            context.Context
+	done           <-chan struct{}
 	cancel         context.CancelFunc
 	pubStream      chan interface{}
 	subStream      chan topicSubscription
@@ -64,7 +64,7 @@ type Broker struct {
 func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 	InitLogger(os.Stdout)
 	b = new(Broker)
-	b.ctx = ctx
+	b.done = ctx.Done()
 	b.cancel = cancel
 	b.pubStream = make(chan interface{}, 0)
 	b.subStream = make(chan topicSubscription, 0)
@@ -74,7 +74,7 @@ func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go b.start(&wg)
+	go b.start(ctx, &wg)
 	wg.Wait()
 
 	return
@@ -85,18 +85,18 @@ func removeIndex(s []chan interface{}, index int) []chan interface{} {
 }
 
 func (b *Broker) Done() <-chan struct{} {
-	return b.ctx.Done()
+	return b.done
 }
 
-func (b *Broker) start(wg *sync.WaitGroup) {
+func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Done()
 	subs := make(map[Topic][]chan interface{})
 	subs[JoinTopic] = make([]chan interface{}, 0)
 	subs[PingPongTopic] = make([]chan interface{}, 0)
 	for {
 		select {
-		case <-b.ctx.Done():
-			logger.Debug("Entering <-b.ctx.Done()")
+		case <-ctx.Done():
+			logger.Debug("Entering <-ctx.Done()")
 			// Attempt to close every stream in subs
 			// TODO: Make this safer, so closing a closed stream doesnt panic
 			for _, v := range subs {
@@ -104,7 +104,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 					close(stream)
 				}
 			}
-			logger.Debug("Leaving <-b.ctx.Done()")
+			logger.Debug("Leaving <-ctx.Done()")
 			return
 		case sub := <-b.subStream:
 			logger.Debug("Entering sub := <-b.subStream")
@@ -145,7 +145,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				for _, stream := range subs[topic] {
 					logger.Debugf("Publishing %v to %v stream for %v", msg, stream, topic)
 					select {
-					case <-b.ctx.Done():
+					case <-ctx.Done():
 					case stream <- msg:
 					case <-time.After(b.publishTimeout):
 						// TODO: Need to log this as an error visible to user
@@ -163,7 +163,7 @@ func (b *Broker) start(wg *sync.WaitGroup) {
 				subCount += len(v)
 			}
 			select {
-			case <-b.Done():
+			case <-ctx.Done():
 				return
 			case subCountStream <- subCount:
 			}
@@ -245,8 +245,6 @@ func (b *Broker) SubscriptionCount() int {
 	defer close(subCountStream)
 	b.subCountReq <- subCountStream
 	select {
-	case <-b.Done():
-		return -1
 	case count := <-subCountStream:
 		logger.Debugf("Received %d subscriptions count from subCountStream", count)
 		return count

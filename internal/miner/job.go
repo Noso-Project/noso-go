@@ -39,44 +39,56 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 	}
 	defer client.Unsubscribe(poolDataStream)
 
-	// TODO: This is here because the JobManager needs to be listening to JobTopic
-	//       stream before JoinOk is received. Should probably do this another way
-	wg.Done()
-
 	// Leave these channels nil until we get our first PoolData msg
 	var jStream, nJob chan common.Job
 	jStream, nJob = nil, nil
 	var job common.Job
 
+	// TODO: This is here because the JobManager needs to be listening to JobTopic
+	//       stream before JoinOk is received. Should probably do this another way
+	wg.Done()
+
 loop:
 	for {
 		select {
 		case <-ctx.Done():
+			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 			return
 		case job = <-nJob:
+			fmt.Println("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
 			nJob = nil
 			jStream = jobStream
 		case jStream <- job:
+			fmt.Println("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
 			jStream = nil
 			nJob = builder.nextJob
 		case poolDataMsg := <-poolDataStream:
+			fmt.Println("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
 			switch poolDataMsg.(type) {
 			case common.Pong:
 				continue loop
 			}
-			resp := builder.Update(poolDataMsg)
-			// TODO: likely bug here on client reconnect/rejoin
-			if resp == common.JOINOK {
-				nJob = builder.nextJob
-			}
+			// resp := builder.Update(poolDataMsg)
+			builder.Update(poolDataMsg)
+			nJob = builder.nextJob
+			jStream = nil
+			// // TODO: likely bug here on client reconnect/rejoin
+			// if resp == common.JOINOK {
+			// 	nJob = builder.nextJob
+			// }
+			fmt.Println("DDDDDDDDDDDDDDDDDDDDDDDddddddddddddddddddddddddddd")
 
 		case jobTopicMsg := <-jobTopicStream:
+			fmt.Println("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
 			func(stream <-chan common.Job) {
 				select {
 				case <-ctx.Done():
 					return
 				// TODO: Deadlock/Livelock possible, probably need to timeout here
 				case jobTopicMsg.(common.JobStreamReq).Stream <- stream:
+					fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+				case <-time.After(100 * time.Millisecond):
+					fmt.Println("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
 				}
 			}(jobStream)
 		}
@@ -86,6 +98,7 @@ loop:
 func newJobBuilder(ctx context.Context) (j *jobBuilder) {
 	j = new(jobBuilder)
 	j.joined = make(chan struct{}, 0)
+	j.newBlock = make(chan struct{}, 0)
 	j.nextJob = make(chan common.Job, 0)
 	j.mu = new(sync.Mutex)
 
@@ -99,6 +112,7 @@ func newJobBuilder(ctx context.Context) (j *jobBuilder) {
 
 type jobBuilder struct {
 	joined       chan struct{}
+	newBlock     chan struct{}
 	nextJob      chan common.Job
 	poolAddr     string
 	seedFromPool string
@@ -131,6 +145,9 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 	seedPostfixStream := make(chan string, 0)
 	go seedCharGen(ctx, seedPostfixStream)
 
+	jobCtx, jobCancel := context.WithCancel(ctx)
+
+seedLoop:
 	for {
 		seedBase := j.seedFromPool[:len(j.seedFromPool)-3]
 		seed := fmt.Sprintf("%s%s", seedBase, <-seedPostfixStream)
@@ -138,9 +155,18 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 		for num := 1; num < 999; num++ {
 			postfix := ver + fmt.Sprintf("%03d", num)
 			fullSeed := seed + j.poolAddr + postfix
-			job = j.newJob(seed, fullSeed)
+			job = j.newJob(jobCtx, seed, fullSeed)
 			select {
+			case <-j.newBlock:
+				// Cancel old jobs
+				fmt.Println("111111111111111111111111111111111111111111111111111111")
+				jobCancel()
+				fmt.Println("111111111111111111111111111111111111111111111111111111")
+				jobCtx, jobCancel = context.WithCancel(ctx)
+				fmt.Println("111111111111111111111111111111111111111111111111111111")
+				continue seedLoop
 			case j.nextJob <- job:
+				fmt.Println("3333333333333333333333333333333333333")
 			case <-ctx.Done():
 				return
 			}
@@ -148,21 +174,21 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (j *jobBuilder) newJob(minerSeedBase, minerSeed string) common.Job {
-	// fmt.Println("newJob() Called")
+func (j *jobBuilder) newJob(ctx context.Context, minerSeedBase, minerSeed string) (job common.Job) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	return common.Job{
-		PoolAddr:      j.poolAddr,
-		MinerSeedBase: minerSeedBase,
-		MinerSeed:     minerSeed,
-		TargetString:  j.targetString,
-		TargetChars:   j.targetChars,
-		Diff:          j.diff,
-		Block:         j.block,
-		Step:          j.step,
-		PoolDepth:     j.poolDepth,
-	}
+	job = common.NewJob(ctx)
+	job.PoolAddr = j.poolAddr
+	job.MinerSeedBase = minerSeedBase
+	job.MinerSeed = minerSeed
+	job.TargetString = j.targetString
+	job.TargetChars = j.targetChars
+	job.Diff = j.diff
+	job.Block = j.block
+	job.Step = j.step
+	job.PoolDepth = j.poolDepth
+
+	return
 }
 
 // Example job from 1.6.2
@@ -179,7 +205,9 @@ func (j *jobBuilder) newJob(minerSeedBase, minerSeed string) common.Job {
 // PoolDepth:3}
 
 func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
-	// fmt.Println("Updated() Called")
+	fmt.Println("1111111111111111111111111111111111111")
+	fmt.Printf("%+v\n", poolData)
+	fmt.Println("1111111111111111111111111111111111111")
 	switch poolData.(type) {
 	case common.JoinOk:
 		j.mu.Lock()
@@ -197,12 +225,19 @@ func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
 	case common.PoolSteps:
 		j.mu.Lock()
 		defer j.mu.Unlock()
+		oldBlock := j.block
 		j.targetString = poolData.(common.PoolSteps).TargetHash
 		j.targetChars = poolData.(common.PoolSteps).TargetLen
 		j.diff = poolData.(common.PoolSteps).Difficulty
 		j.block = poolData.(common.PoolSteps).Block
 		j.step = poolData.(common.PoolSteps).CurrentStep
 		j.poolDepth = poolData.(common.PoolSteps).PoolDepth
+
+		if oldBlock != j.block {
+			fmt.Println("2222222222222222222222222222222222222")
+			j.newBlock <- struct{}{}
+			fmt.Println("2222222222222222222222222222222222222")
+		}
 		return common.POOLSTEPS
 	}
 	return common.OTHER
