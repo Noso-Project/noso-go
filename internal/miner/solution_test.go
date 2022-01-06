@@ -4,13 +4,18 @@ import (
 	"bufio"
 	"context"
 	"net"
+	"os"
 	"sync"
 	"testing"
 
 	"github.com/Noso-Project/noso-go/internal/common"
+	"github.com/fortytw2/leaktest"
 )
 
 func TestSolutionManager(t *testing.T) {
+	if _, present := os.LookupEnv("LEAKTEST"); present {
+		defer leaktest.Check(t)()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -33,7 +38,7 @@ func TestSolutionManager(t *testing.T) {
 		TargetLen: 54321,
 	}
 
-	client.Publish(sol)
+	client.Publish(ctx, sol)
 
 	scanner := bufio.NewScanner(svr)
 	scanner.Scan()

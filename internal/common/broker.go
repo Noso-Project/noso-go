@@ -47,6 +47,7 @@ var (
 	SubscribeTimeout      = 1 * time.Second
 	ErrSubscribeTimeout   = errors.New("Timed out trying to subscribe to Topic")
 	ErrUnknownMessageType = errors.New("Could not correlate server response to topic")
+	ErrContextClosed      = errors.New("Context closed before channel read/write could happen")
 )
 
 // TODO: find a way to not use interface{} for the channel
@@ -200,8 +201,12 @@ func findTopics(msg interface{}) ([]Topic, error) {
 	}
 }
 
-func (b *Broker) Publish(msg interface{}) {
-	b.pubStream <- msg
+func (b *Broker) Publish(ctx context.Context, msg interface{}) {
+	select {
+	case <-ctx.Done():
+		return
+	case b.pubStream <- msg:
+	}
 }
 
 type topicSubscription struct {
@@ -210,7 +215,7 @@ type topicSubscription struct {
 	errStream chan error
 }
 
-func (b *Broker) Subscribe(topic Topic) (<-chan interface{}, error) {
+func (b *Broker) Subscribe(ctx context.Context, topic Topic) (<-chan interface{}, error) {
 	// TODO: Confusing naming between this and b.subStream, rethink
 	subStream := make(chan interface{}, 0)
 	errStream := make(chan error, 0)
@@ -220,31 +225,47 @@ func (b *Broker) Subscribe(topic Topic) (<-chan interface{}, error) {
 		subStream: subStream,
 		errStream: errStream,
 	}
-	b.subStream <- t
+	select {
+	case <-ctx.Done():
+		return subStream, ErrContextClosed
+	case b.subStream <- t:
+	}
 
 	select {
 	case err := <-errStream:
 		return subStream, err
+	case <-ctx.Done():
+		return subStream, ErrContextClosed
 	case <-time.After(time.Second):
 		return subStream, ErrSubscribeTimeout
 	}
 }
 
-func (b *Broker) Unsubscribe(unsub <-chan interface{}) {
+func (b *Broker) Unsubscribe(ctx context.Context, unsub <-chan interface{}) {
 	// TODO: How can I notify the caller that this failed?
 	//       Maybe create and return an err channel, and pass
 	//       err channel to Start?
 	logger.Debug("Entering Broker Unsubscribe")
-	b.unsubStream <- unsub
+	select {
+	case <-ctx.Done():
+		return
+	case b.unsubStream <- unsub:
+	}
 	logger.Debug("Leaving Broker Unsubscribe")
 }
 
-func (b *Broker) SubscriptionCount() int {
+func (b *Broker) SubscriptionCount(ctx context.Context) int {
 	logger.Debug("Entering SubscriptionCount")
 	subCountStream := make(chan int, 0)
 	defer close(subCountStream)
-	b.subCountReq <- subCountStream
 	select {
+	case <-ctx.Done():
+		return -1
+	case b.subCountReq <- subCountStream:
+	}
+	select {
+	case <-ctx.Done():
+		return -1
 	case count := <-subCountStream:
 		logger.Debugf("Received %d subscriptions count from subCountStream", count)
 		return count

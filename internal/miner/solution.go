@@ -11,7 +11,7 @@ import (
 func SolutionManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) {
 	wg.Done()
 
-	solStream, err := client.Subscribe(common.SolutionTopic)
+	solStream, err := client.Subscribe(ctx, common.SolutionTopic)
 	if err != nil {
 		panic(fmt.Sprint("Got an err and didn't expect one", err))
 	}
@@ -20,10 +20,14 @@ func SolutionManager(ctx context.Context, client *common.Client, wg *sync.WaitGr
 		select {
 		case <-ctx.Done():
 			return
-		case sol := <-solStream:
+		case sol, ok := <-solStream:
+			if !ok {
+				return
+			}
 			// TODO: Need to finalize logger situation
 			// common.logger.Debugf("Solution pulled from <-solStream: %v\n", sol)
-			client.Send(sol.(common.Solution).String())
+			// TODO: Log solution found to console
+			client.Send(ctx, sol.(common.Solution).String())
 		}
 	}
 }

@@ -45,11 +45,12 @@ func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Clie
 		deadlineTimeout: DeadlineExceededTimeout,
 		joinTimeout:     JoinTimeout,
 		pingInterval:    PingInterval,
+		reconnectWait:   ReconnectWait,
 	}
 
 	started := make(chan struct{}, 0)
 	logger.Debug("Client starting")
-	go client.start(started, true)
+	go client.start(ctx, started, true)
 
 	// TODO: Need to protect this with select and return err
 	<-started
@@ -74,11 +75,12 @@ func NewClientWithConn(ctx context.Context, conn net.Conn) (client *Client) {
 		deadlineTimeout: DeadlineExceededTimeout,
 		joinTimeout:     JoinTimeout,
 		pingInterval:    PingInterval,
+		reconnectWait:   ReconnectWait,
 	}
 
 	started := make(chan struct{}, 0)
 	logger.Debug("Client starting")
-	go client.start(started, false)
+	go client.start(ctx, started, false)
 
 	// TODO: Need to protect this with select and return err
 	<-started
@@ -111,34 +113,35 @@ type Client struct {
 	deadlineTimeout time.Duration
 	joinTimeout     time.Duration
 	pingInterval    time.Duration
+	reconnectWait   time.Duration
 }
 
-func (c *Client) init() (context.Context, context.CancelFunc) {
+func (c *Client) init(ctx context.Context, cancel context.CancelFunc) {
 	logger.Debug("Initializing client")
 	c.mu.Lock()
 	logger.Debug("init() has the lock")
 	defer logger.Debug("init() released the lock")
 	defer c.mu.Unlock()
-	ctx, cancel := context.WithCancel(c.parentCtx)
 	c.connected = make(chan struct{}, 0)
 	c.joined = make(chan struct{}, 0)
 	c.broker = NewBroker(ctx, cancel)
 
 	logger.Debug("Client initialized")
 
-	return ctx, cancel
+	return
 }
 
-func (c *Client) start(started chan struct{}, withConn bool) {
+func (c *Client) start(parentCtx context.Context, started chan struct{}, withConn bool) {
 	var wg sync.WaitGroup
 	var once sync.Once
 
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer func(cancel context.CancelFunc) { cancel() }(cancel)
+
 	for count := 0; ; count++ {
 		logger.Debugf("Count is: %d", count)
-		ctx, cancel := c.init()
-		// TODO: need to wrap this section in func so cancel can be called
-		//       and garbage collected
-		defer func(cancel context.CancelFunc) { logger.Debugf("Calling deferred cancel()"); cancel() }(cancel)
+		ctx, cancel = context.WithCancel(parentCtx)
+		c.init(ctx, cancel)
 
 		logger.Debugf("Starting send, recv, and ping goroutines")
 		wg.Add(3)
@@ -152,8 +155,12 @@ func (c *Client) start(started chan struct{}, withConn bool) {
 
 		if withConn == true {
 			// Wait for trigger to connect from Connect() method
-			<-c.doConnect
-			err := c.connect()
+			select {
+			case <-c.doConnect:
+			case <-ctx.Done():
+				return
+			}
+			err := c.connect(ctx)
 			if err != nil {
 				switch err.(error) {
 				case ErrAlreadyConnected:
@@ -177,6 +184,9 @@ func (c *Client) start(started chan struct{}, withConn bool) {
 		select {
 		case <-c.parentCtx.Done():
 			logger.Debug("<-parentCtx.Done() closed")
+			if c.conn != nil {
+				c.conn.Close()
+			}
 			cancel()
 			return
 		case <-ctx.Done():
@@ -184,13 +194,13 @@ func (c *Client) start(started chan struct{}, withConn bool) {
 		}
 
 		// TODO: Set configurable reconnect interval
-		logger.Infof("Will reconnect in %s seconds", ReconnectWait)
-		time.Sleep(ReconnectWait)
+		logger.Infof("Will reconnect in %s seconds", c.reconnectWait)
+		time.Sleep(c.reconnectWait)
 		logger.Info("About to reconnect")
 	}
 }
 
-func (c *Client) Connected() chan struct{} {
+func (c *Client) Connected() <-chan struct{} {
 	c.mu.Lock()
 	logger.Debug("Connected() has the lock")
 	defer logger.Debug("Connected() released the lock")
@@ -207,10 +217,11 @@ func (c *Client) Joined() chan struct{} {
 }
 func (c *Client) Connect() error {
 	close(c.doConnect)
+	// TODO: Leaking a goroutine here, need to bail out if <-ctx.Done()
 	return <-c.doConnectErr
 }
 
-func (c *Client) connect() (err error) {
+func (c *Client) connect(ctx context.Context) (err error) {
 
 	if c.conn != nil {
 		logger.Debug("Found existing connection; closing")
@@ -225,22 +236,22 @@ func (c *Client) connect() (err error) {
 	close(c.connected)
 
 	logger.Debug("Subscribing to JoinTopic")
-	joinStream, err := c.Subscribe(JoinTopic)
+	joinStream, err := c.Subscribe(ctx, JoinTopic)
 	if err != nil {
 		return err
 	}
 	logger.Debug("Subscribed to JoinTopic for stream: ", joinStream)
 	defer logger.Debug("deferred Unsubscribe for ", joinStream)
-	defer c.Unsubscribe(joinStream)
+	defer c.Unsubscribe(ctx, joinStream)
 
 	// TODO: Might need to explicitely separate connect and join,
 	//       as its possible a secondary client might want to connect,
 	//       to a pool but not join it until the primary fails
-	c.join()
+	c.join(ctx)
 
 	select {
 	case resp := <-joinStream:
-		logger.Debugf("JOIN resp: %s", resp)
+		logger.Debugf("JOIN resp: %v", resp)
 		switch resp.(type) {
 		case JoinOk:
 		case AlreadyConnected:
@@ -256,18 +267,18 @@ func (c *Client) connect() (err error) {
 	return nil
 }
 
-func (c *Client) join() {
+func (c *Client) join(ctx context.Context) {
 	// TODO: Need to use real values for version and instanceId
-	c.Send("JOIN ng9.9.9")
+	c.Send(ctx, "JOIN ng9.9.9")
 }
 
 // TODO: Pass in Tx objects here instead of strings
-func (c *Client) Send(msg string) {
+func (c *Client) Send(ctx context.Context, msg string) {
 	go func(msg string) {
 		// TODO: Should I make this timeout? Or use a context deadline?
 		select {
-		case <-c.parentCtx.Done():
-			logger.Debug("<-c.parentCtx.Done() closed")
+		case <-ctx.Done():
+			logger.Debug("<-ctx.Done() closed")
 			return
 		case c.sendStream <- msg:
 			logger.Debugf("Sent %s to %v", msg, c.sendStream)
@@ -276,35 +287,35 @@ func (c *Client) Send(msg string) {
 }
 
 // TODO: Really shouldn't use chan interface{} here
-func (c *Client) Publish(pub interface{}) {
+func (c *Client) Publish(ctx context.Context, pub interface{}) {
 	// TODO: There is an expectation here that Subscribe blocks
 	//       until we are actually subscribed
 	c.mu.Lock()
 	logger.Debug("Publish() has the lock")
 	defer logger.Debug("Publish() released the lock")
 	defer c.mu.Unlock()
-	c.broker.Publish(pub)
+	c.broker.Publish(ctx, pub)
 }
 
 // TODO: Really shouldn't use chan interface{} here
-func (c *Client) Subscribe(topic Topic) (<-chan interface{}, error) {
+func (c *Client) Subscribe(ctx context.Context, topic Topic) (<-chan interface{}, error) {
 	// TODO: There is an expectation here that Subscribe blocks
 	//       until we are actually subscribed
 	c.mu.Lock()
 	logger.Debug("Subscribe() has the lock")
 	defer logger.Debug("Subscribe() released the lock")
 	defer c.mu.Unlock()
-	return c.broker.Subscribe(topic)
+	return c.broker.Subscribe(ctx, topic)
 }
 
 // TODO: Really shouldn't use chan interface{} here
 // TODO: Need to return an error here
-func (c *Client) Unsubscribe(unsubStream <-chan interface{}) {
+func (c *Client) Unsubscribe(ctx context.Context, unsubStream <-chan interface{}) {
 	c.mu.Lock()
 	logger.Debug("Unsubscribe() has the lock")
 	defer logger.Debug("Unsubscribe() released the lock")
 	defer c.mu.Unlock()
-	c.broker.Unsubscribe(unsubStream)
+	c.broker.Unsubscribe(ctx, unsubStream)
 }
 
 func (c *Client) send(ctx context.Context, cancel context.CancelFunc, wg *sync.WaitGroup) {
@@ -342,7 +353,7 @@ func (c *Client) recv(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 			logger.Error("Received an unknown response: ", resp)
 		}
 		// logger.Debug("Parsed msg: ", msg)
-		c.Publish(msg)
+		c.Publish(ctx, msg)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -373,7 +384,7 @@ func (c *Client) ping(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 			return
 		case <-ticker.C:
 			// TODO: Need to use real hash rate value here instead of zero
-			c.Send("PING 0")
+			c.Send(ctx, "PING 0")
 		}
 	}
 }

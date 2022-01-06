@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/fortytw2/leaktest v1.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/spf13/cobra v1.1.3

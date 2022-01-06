@@ -2,22 +2,28 @@ package common
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
 )
 
 func TestBroker(t *testing.T) {
+	if _, present := os.LookupEnv("LEAKTEST"); present {
+		defer leaktest.Check(t)()
+	}
 	t.Run("publish", func(t *testing.T) {
 		event, _ := parse(JOINOK_default)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		broker := NewBroker(ctx, cancel)
-		subCh, err := broker.Subscribe(JoinTopic)
+		subCh, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
-		broker.Publish(event)
+		broker.Publish(ctx, event)
 
 		var got interface{}
 		select {
@@ -37,22 +43,22 @@ func TestBroker(t *testing.T) {
 		defer cancel()
 		broker := NewBroker(ctx, cancel)
 
-		got := broker.SubscriptionCount()
+		got := broker.SubscriptionCount(ctx)
 		want := 0
 
 		if got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 
-		joinStream, err := broker.Subscribe(JoinTopic)
+		joinStream, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
 		event, _ := parse(JOINOK_default)
-		broker.Publish(event)
+		broker.Publish(ctx, event)
 		<-joinStream
 
-		got = broker.SubscriptionCount()
+		got = broker.SubscriptionCount(ctx)
 		want = 1
 
 		if got != want {
@@ -63,15 +69,15 @@ func TestBroker(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		broker := NewBroker(ctx, cancel)
-		joinStream, err := broker.Subscribe(JoinTopic)
+		joinStream, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
-		broker.Unsubscribe(joinStream)
+		broker.Unsubscribe(ctx, joinStream)
 
 		assertRoStreamClosed(t, joinStream)
 
-		got := broker.SubscriptionCount()
+		got := broker.SubscriptionCount(ctx)
 		want := 0
 
 		if got != want {
@@ -82,21 +88,21 @@ func TestBroker(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		event, _ := parse(PONG_default)
 		broker := NewBroker(ctx, cancel)
-		pingStream, err := broker.Subscribe(PingPongTopic)
+		pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
-		joinStream, err := broker.Subscribe(JoinTopic)
+		joinStream, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
-		poolDataStream, err := broker.Subscribe(PoolDataTopic)
+		poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
 
 		// Verify the subscriptions are alive
-		broker.Publish(event)
+		broker.Publish(ctx, event)
 
 		pingStreamCp := pingStream
 		poolDataStreamCp := poolDataStream
@@ -128,19 +134,19 @@ func TestBroker(t *testing.T) {
 		defer cancel()
 		event, _ := parse(PONG_default)
 		broker := NewBroker(ctx, cancel)
-		pingStream, err := broker.Subscribe(PingPongTopic)
+		pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Error("Got an error and didn't expect one:", err)
 		}
-		broker.Subscribe(PingPongTopic)
+		broker.Subscribe(ctx, PingPongTopic)
 
 		go func() {
 			// Publish an event to trigger publish workflow
-			broker.Publish(event)
+			broker.Publish(ctx, event)
 
 			// Now send another event to ensure broker should be hung on write
 			// to stream causing it to restart the client
-			broker.Publish(event)
+			broker.Publish(ctx, event)
 		}()
 
 		select {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -44,12 +43,8 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 	for job := range comms.Jobs {
 		jobStart = time.Now()
 		targetMin = (job.Diff / 10) + 1 - job.PoolDepth
-		fmt.Printf("************* SeedFullBytes is: %+v\n", job.SeedFullBytes)
-		fmt.Printf("************* SeedFullBytes is: %s\n", job.SeedFullBytes)
 		buff = bytes.NewBuffer(job.SeedFullBytes)
-		fmt.Printf("************* buff is         : %+v\n", buff)
 		seedLen = buff.Len()
-		fmt.Printf("************* seedLen is      : %+v\n", seedLen)
 		hashCount = 0
 
 		targets = make([]string, job.PoolDepth+1)
@@ -73,17 +68,9 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 						buff.WriteRune(z)
 
 						// This is the meat of the hashing
-						fmt.Printf("************* buff is        : %+v\n", buff)
-						fmt.Printf("************* buff.Bytes() is: %+v\n", buff.Bytes())
-						fmt.Printf("************* buff.Bytes() is: %s\n", buff.Bytes())
-						time.Sleep(time.Second)
 						tmp = sha256.Sum256(buff.Bytes())
 						hex.Encode(encoded, tmp[:])
 						val = BytesToString(encoded)
-						fmt.Printf("************* encoded is     : %+v\n", encoded)
-						fmt.Printf("************* encoded is     : %s\n", encoded)
-						fmt.Printf("************* val is         : %+v\n", val)
-						fmt.Printf("************* val is         : %s\n", val)
 
 						// TODO: We could almost certainly increase hashrate if we
 						//       could search the sha sum bytes rather than converting

@@ -103,13 +103,13 @@ benchmarks: benchmark-send benchmark-sendparallel benchmark-msbasic benchmark-ms
 
 RACE ?= -race
 
+#  -run=XXX excludes unit tests
+#  -bench "(?i)$*$$" is a regex match
+#         (?i) makes it case insensitive
+#         $* matches the % in benchmark-%
+#         $$ is make's version of an escaped $
 .PHONY: benchmark-%
 benchmark-%:
-	#  -run=XXX excludes unit tests
-	#  -bench "(?i)$*$$" is a regex match
-	#         (?i) makes it case insensitive
-	#         $* matches the % in benchmark-%
-	#         $$ is make's version of an escaped $
 	$(gotest) -run=XXX -bench "(?i)$*$$" -benchtime 5s -count 1 -v $(RACE)  ./... -cpu=1,2
 
 .PHONY: clean

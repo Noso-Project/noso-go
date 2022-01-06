@@ -22,22 +22,43 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 	//       Might need a sync.Cond from the client for that
 	// TODO: Likewise, might need a "ready" WaitGroup in all goroutines to signal readiness?
 
+	jobCount := 0
+	var mu sync.Mutex
+
+	go func(mu *sync.Mutex) {
+		oldCount := 0
+		ticker := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				mu.Lock()
+				count := jobCount
+				mu.Unlock()
+				actual := count - oldCount
+				fmt.Printf("%s -  %7d jobs (%d jobs/second)\n", time.Now(), actual, int(actual/10))
+				oldCount = count
+			}
+		}
+	}(&mu)
+
 	builder := newJobBuilder(ctx)
 
 	jobStream := make(chan common.Job, 0)
 
-	jobTopicStream, err := client.Subscribe(common.JobTopic)
+	jobTopicStream, err := client.Subscribe(ctx, common.JobTopic)
 	if err != nil {
 		panic(err)
 	}
 
-	defer client.Unsubscribe(jobTopicStream)
+	defer client.Unsubscribe(ctx, jobTopicStream)
 
-	poolDataStream, err := client.Subscribe(common.PoolDataTopic)
+	poolDataStream, err := client.Subscribe(ctx, common.PoolDataTopic)
 	if err != nil {
 		panic(err)
 	}
-	defer client.Unsubscribe(poolDataStream)
+	defer client.Unsubscribe(ctx, poolDataStream)
 
 	// TODO: This is here because the JobManager needs to be listening to JobTopic
 	//       stream before JoinOk is received. Should probably do this another way
@@ -58,13 +79,14 @@ loop:
 		}
 		select {
 		case <-ctx.Done():
-			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 			return
 		case jStream <- job:
+			mu.Lock()
+			jobCount++
+			mu.Unlock()
 			job = nilJob
 		case job = <-nJob:
 		case poolDataMsg := <-poolDataStream:
-			fmt.Println("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
 			switch poolDataMsg.(type) {
 			case common.Pong:
 				continue loop
@@ -72,17 +94,21 @@ loop:
 			job = nilJob
 			builder.Update(poolDataMsg)
 
-		case jobTopicMsg := <-jobTopicStream:
-			fmt.Println("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-			func(stream <-chan common.Job) {
-				select {
-				case <-ctx.Done():
-					return
-				// TODO: Deadlock/Livelock possible, probably need to timeout here
-				case jobTopicMsg.(common.JobStreamReq).Stream <- stream:
-				case <-time.After(100 * time.Millisecond):
-				}
-			}(jobStream)
+		case jobTopicMsg, ok := <-jobTopicStream:
+			if !ok {
+				fmt.Println("************\nThe jobTopicStream closed unexpectidly\n*************")
+				jobTopicStream = nil
+			} else {
+				func(stream <-chan common.Job) {
+					select {
+					case <-ctx.Done():
+						return
+					// TODO: Deadlock/Livelock possible, probably need to timeout here
+					case jobTopicMsg.(common.JobStreamReq).Stream <- stream:
+					case <-time.After(100 * time.Millisecond):
+					}
+				}(jobStream)
+			}
 		}
 	}
 }
@@ -151,14 +177,10 @@ seedLoop:
 			select {
 			case <-j.newBlock:
 				// Cancel old jobs
-				fmt.Println("111111111111111111111111111111111111111111111111111111")
 				jobCancel()
-				fmt.Println("111111111111111111111111111111111111111111111111111111")
 				jobCtx, jobCancel = context.WithCancel(ctx)
-				fmt.Println("111111111111111111111111111111111111111111111111111111")
 				continue seedLoop
 			case j.nextJob <- job:
-				fmt.Println("3333333333333333333333333333333333333")
 			case <-ctx.Done():
 				return
 			}
@@ -261,7 +283,7 @@ func seedCharGen(ctx context.Context, stream chan string) {
 func requestJobStream(ctx context.Context, client *common.Client) <-chan common.Job {
 
 	stream := make(chan (<-chan common.Job), 0)
-	client.Publish(common.JobStreamReq{Stream: stream})
+	client.Publish(ctx, common.JobStreamReq{Stream: stream})
 
 	select {
 	case s := <-stream:

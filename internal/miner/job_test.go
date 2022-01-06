@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/Noso-Project/noso-go/internal/common"
+	"github.com/fortytw2/leaktest"
 )
 
 const (
@@ -19,6 +21,9 @@ const (
 )
 
 func TestJobManager(t *testing.T) {
+	if _, present := os.LookupEnv("LEAKTEST"); present {
+		defer leaktest.Check(t)()
+	}
 	t.Run("jobs get published", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
