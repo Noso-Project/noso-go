@@ -39,44 +39,38 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 	}
 	defer client.Unsubscribe(poolDataStream)
 
-	// Leave these channels nil until we get our first PoolData msg
-	var jStream, nJob chan common.Job
-	jStream, nJob = nil, nil
-	var job common.Job
-
 	// TODO: This is here because the JobManager needs to be listening to JobTopic
 	//       stream before JoinOk is received. Should probably do this another way
 	wg.Done()
 
+	var job, nilJob common.Job
+	jStream := jobStream
+	nJob := builder.nextJob
+	nJob, jStream = nil, nil
 loop:
 	for {
+		if job == nilJob {
+			nJob = builder.nextJob
+			jStream = nil
+		} else {
+			nJob = nil
+			jStream = jobStream
+		}
 		select {
 		case <-ctx.Done():
 			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 			return
-		case job = <-nJob:
-			fmt.Println("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
-			nJob = nil
-			jStream = jobStream
 		case jStream <- job:
-			fmt.Println("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
-			jStream = nil
-			nJob = builder.nextJob
+			job = nilJob
+		case job = <-nJob:
 		case poolDataMsg := <-poolDataStream:
 			fmt.Println("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
 			switch poolDataMsg.(type) {
 			case common.Pong:
 				continue loop
 			}
-			// resp := builder.Update(poolDataMsg)
+			job = nilJob
 			builder.Update(poolDataMsg)
-			nJob = builder.nextJob
-			jStream = nil
-			// // TODO: likely bug here on client reconnect/rejoin
-			// if resp == common.JOINOK {
-			// 	nJob = builder.nextJob
-			// }
-			fmt.Println("DDDDDDDDDDDDDDDDDDDDDDDddddddddddddddddddddddddddd")
 
 		case jobTopicMsg := <-jobTopicStream:
 			fmt.Println("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
@@ -86,9 +80,7 @@ loop:
 					return
 				// TODO: Deadlock/Livelock possible, probably need to timeout here
 				case jobTopicMsg.(common.JobStreamReq).Stream <- stream:
-					fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 				case <-time.After(100 * time.Millisecond):
-					fmt.Println("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
 				}
 			}(jobStream)
 		}
@@ -205,38 +197,38 @@ func (j *jobBuilder) newJob(ctx context.Context, minerSeedBase, minerSeed string
 // PoolDepth:3}
 
 func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
-	fmt.Println("1111111111111111111111111111111111111")
-	fmt.Printf("%+v\n", poolData)
-	fmt.Println("1111111111111111111111111111111111111")
 	switch poolData.(type) {
 	case common.JoinOk:
-		j.mu.Lock()
-		defer j.mu.Unlock()
-		j.poolAddr = poolData.(common.JoinOk).PoolAddr
-		j.seedFromPool = poolData.(common.JoinOk).MinerSeed
-		j.targetString = poolData.(common.JoinOk).TargetHash
-		j.targetChars = poolData.(common.JoinOk).TargetLen
-		j.diff = poolData.(common.JoinOk).Difficulty
-		j.block = poolData.(common.JoinOk).Block
-		j.step = poolData.(common.JoinOk).CurrentStep
-		j.poolDepth = poolData.(common.JoinOk).PoolDepth
+		func() {
+			j.mu.Lock()
+			defer j.mu.Unlock()
+			j.poolAddr = poolData.(common.JoinOk).PoolAddr
+			j.seedFromPool = poolData.(common.JoinOk).MinerSeed
+			j.targetString = poolData.(common.JoinOk).TargetHash
+			j.targetChars = poolData.(common.JoinOk).TargetLen
+			j.diff = poolData.(common.JoinOk).Difficulty
+			j.block = poolData.(common.JoinOk).Block
+			j.step = poolData.(common.JoinOk).CurrentStep
+			j.poolDepth = poolData.(common.JoinOk).PoolDepth
+		}()
 		close(j.joined)
 		return common.JOINOK
 	case common.PoolSteps:
-		j.mu.Lock()
-		defer j.mu.Unlock()
-		oldBlock := j.block
-		j.targetString = poolData.(common.PoolSteps).TargetHash
-		j.targetChars = poolData.(common.PoolSteps).TargetLen
-		j.diff = poolData.(common.PoolSteps).Difficulty
-		j.block = poolData.(common.PoolSteps).Block
-		j.step = poolData.(common.PoolSteps).CurrentStep
-		j.poolDepth = poolData.(common.PoolSteps).PoolDepth
+		var oldBlock int
+		func() {
+			j.mu.Lock()
+			defer j.mu.Unlock()
+			oldBlock = j.block
+			j.targetString = poolData.(common.PoolSteps).TargetHash
+			j.targetChars = poolData.(common.PoolSteps).TargetLen
+			j.diff = poolData.(common.PoolSteps).Difficulty
+			j.block = poolData.(common.PoolSteps).Block
+			j.step = poolData.(common.PoolSteps).CurrentStep
+			j.poolDepth = poolData.(common.PoolSteps).PoolDepth
+		}()
 
 		if oldBlock != j.block {
-			fmt.Println("2222222222222222222222222222222222222")
 			j.newBlock <- struct{}{}
-			fmt.Println("2222222222222222222222222222222222222")
 		}
 		return common.POOLSTEPS
 	}

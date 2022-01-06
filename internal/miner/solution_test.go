@@ -3,11 +3,9 @@ package miner
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/Noso-Project/noso-go/internal/common"
 )
@@ -54,46 +52,46 @@ func TestSolutionManager(t *testing.T) {
 	}
 }
 
-func BenchmarkSolutionManager(b *testing.B) {
-	b.Logf("b.N is: %d\n", b.N)
+// func BenchmarkSolutionManager(b *testing.B) {
+// 	b.Logf("b.N is: %d\n", b.N)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	var wg sync.WaitGroup
+// 	var wg sync.WaitGroup
 
-	conn, svr := net.Pipe()
-	defer conn.Close()
-	defer svr.Close()
+// 	conn, svr := net.Pipe()
+// 	defer conn.Close()
+// 	defer svr.Close()
 
-	client := common.NewClientWithConn(ctx, conn)
+// 	client := common.NewClientWithConn(ctx, conn)
 
-	wg.Add(1)
-	go JobManager(ctx, client, &wg)
-	wg.Wait()
+// 	wg.Add(1)
+// 	go JobManager(ctx, client, &wg)
+// 	wg.Wait()
 
-	// A miner will publish a request to the JobTopic, requesting a jobStream,
-	// and including in the request a channel to receive the jobStream on
-	jobStream := requestJobStream(ctx, client)
+// 	// A miner will publish a request to the JobTopic, requesting a jobStream,
+// 	// and including in the request a channel to receive the jobStream on
+// 	jobStream := requestJobStream(ctx, client)
 
-	// Send a JOINOK from svr to client so PoolData info gets published
-	// The JobManager will get the PoolData message, build a new Job,
-	// and put it on the jobStream
-	go func() {
-		fmt.Fprintln(svr, JOINOK)
-		pongTicker := time.NewTicker(11 * time.Millisecond)
-		poolStepsTicker := time.NewTicker(17 * time.Millisecond)
-		for count := 0; ; count++ {
-			select {
-			case <-pongTicker.C:
-				fmt.Fprintln(svr, PONG)
-			case <-poolStepsTicker.C:
-				fmt.Fprintln(svr, fmt.Sprintf(POOLSTEPS, count, count%10))
-			}
-		}
-	}()
+// 	// Send a JOINOK from svr to client so PoolData info gets published
+// 	// The JobManager will get the PoolData message, build a new Job,
+// 	// and put it on the jobStream
+// 	go func() {
+// 		fmt.Fprintln(svr, JOINOK)
+// 		pongTicker := time.NewTicker(11 * time.Millisecond)
+// 		poolStepsTicker := time.NewTicker(17 * time.Millisecond)
+// 		for count := 0; ; count++ {
+// 			select {
+// 			case <-pongTicker.C:
+// 				fmt.Fprintln(svr, PONG)
+// 			case <-poolStepsTicker.C:
+// 				fmt.Fprintln(svr, fmt.Sprintf(POOLSTEPS, count, count%10))
+// 			}
+// 		}
+// 	}()
 
-	for n := 0; n < b.N; n++ {
-		<-jobStream
-	}
-}
+// 	for n := 0; n < b.N; n++ {
+// 		<-jobStream
+// 	}
+// }

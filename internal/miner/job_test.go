@@ -224,7 +224,7 @@ func BenchmarkJobManager(b *testing.B) {
 		for {
 			job = <-jobStream
 			if job.Block == n {
-				fmt.Printf("Job is: %+v\n", job)
+				// fmt.Printf("Job is: %+v\n", job)
 				break
 			}
 		}
