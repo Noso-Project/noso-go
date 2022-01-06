@@ -178,6 +178,11 @@ waitready:
 								case step = <-jobComms.Step:
 									job.Step = step
 								case comms.Jobs <- job:
+									fmt.Printf(`******************************************
+Job is:
+%+v
+******************************************
+`, job)
 									continue loop
 								case <-disconnected:
 									time.Sleep(10 * time.Second)
