@@ -17,20 +17,15 @@ const (
 	DUMMYPORT = 12345
 )
 
-func GetFixtures(t testing.TB) (*Client, *TcpServer, context.Context, context.CancelFunc) {
+func GetFixtures(t testing.TB) (*Broker, *Client, *TcpServer, context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := make(respMap)
+	broker := NewBroker(ctx)
 	svr := NewTcpServer(ctx, t, r)
-	client := NewClient(ctx, svr.Host, svr.Port)
+	client := NewClient(ctx, broker, svr.Host, svr.Port)
 
-	return client, svr, ctx, cancel
+	return broker, client, svr, ctx, cancel
 }
-
-// TODO: Remove this if we no longer need it
-// func TestMain(m *testing.M) {
-// 	// logWriter = os.Stdout
-// 	os.Exit(m.Run())
-// }
 
 func TestClientConnect(t *testing.T) {
 	if _, present := os.LookupEnv("LEAKTEST"); present {
@@ -39,7 +34,8 @@ func TestClientConnect(t *testing.T) {
 	t.Run("new client", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		got := NewClient(ctx, DUMMYADDR, DUMMYPORT).poolAddr
+		broker := NewBroker(ctx)
+		got := NewClient(ctx, broker, DUMMYADDR, DUMMYPORT).poolAddr
 		want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
 
 		if got != want {
@@ -47,7 +43,7 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("connect refused", func(t *testing.T) {
-		client, svr, _, cancel := GetFixtures(t)
+		_, client, svr, _, cancel := GetFixtures(t)
 		defer cancel()
 		svr.Close()
 
@@ -65,7 +61,7 @@ func TestClientConnect(t *testing.T) {
 		ConnectTimeout = 1 * time.Nanosecond
 		defer func() { ConnectTimeout = oldTimeout }()
 
-		client, svr, _, cancel := GetFixtures(t)
+		_, client, svr, _, cancel := GetFixtures(t)
 		defer cancel()
 		svr.Close()
 
@@ -79,7 +75,7 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("connect successful", func(t *testing.T) {
-		client, _, _, cancel := GetFixtures(t)
+		_, client, _, _, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -94,7 +90,7 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("join successful", func(t *testing.T) {
-		client, _, _, cancel := GetFixtures(t)
+		_, client, _, _, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -109,16 +105,15 @@ func TestClientConnect(t *testing.T) {
 		}
 	})
 	t.Run("join with bad password", func(t *testing.T) {
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		svr.rMap[JOIN] = []string{PASSFAILED_default}
-
-		joinStream, err := client.Subscribe(ctx, JoinTopic)
+		joinStream, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, joinStream)
+		defer broker.Unsubscribe(ctx, joinStream)
 		// TODO: This might cause a hang in the client in a real world
 		//       scenario. Investigate and improve if needed
 		// broker publish will hang here if connect is not in it's own
@@ -145,12 +140,12 @@ func TestClientConnect(t *testing.T) {
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
 
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		// svr.printConnErr = false
 
-		pingStream, err := client.Subscribe(ctx, PingPongTopic)
+		pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
@@ -165,7 +160,7 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 
-		client.Unsubscribe(ctx, pingStream)
+		broker.Unsubscribe(ctx, pingStream)
 
 		// Subtle race condition here:
 		//  - After closing the connection, its possible that
@@ -206,11 +201,11 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting to rejoin pool")
 		}
 
-		pingStream, err = client.Subscribe(ctx, PingPongTopic)
+		pingStream, err = broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, pingStream)
+		defer broker.Unsubscribe(ctx, pingStream)
 
 		select {
 		case <-pingStream:
@@ -227,12 +222,12 @@ func TestClientConnect(t *testing.T) {
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
 
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		svr.printConnErr = false
 
-		pingStream, err := client.Subscribe(ctx, PingPongTopic)
+		pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
@@ -248,7 +243,7 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting for server pong")
 		}
 
-		client.Unsubscribe(ctx, pingStream)
+		broker.Unsubscribe(ctx, pingStream)
 
 		// Subtle race condition here:
 		//  - After closing the connection, its possible that
@@ -285,11 +280,11 @@ func TestClientConnect(t *testing.T) {
 			t.Fatal("Timed out waiting to rejoin pool")
 		}
 
-		pingStream, err = client.Subscribe(ctx, PingPongTopic)
+		pingStream, err = broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, pingStream)
+		defer broker.Unsubscribe(ctx, pingStream)
 		client.Send(ctx, "PING 2")
 
 		select {
@@ -302,15 +297,18 @@ func TestClientConnect(t *testing.T) {
 		oldWait := ReconnectWait
 		ReconnectWait = time.Microsecond
 		defer func() { ReconnectWait = oldWait }()
+		oldTimeout := PublishTimeout
+		PublishTimeout = 1 * time.Millisecond
+		defer func() { PublishTimeout = oldTimeout }()
 
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		svr.rMap[JOIN] = []string{ALREADYCONNECTED_default, JOINOK_default}
 
 		svr.printConnErr = false
 
-		joinStream, err := client.Subscribe(ctx, JoinTopic)
+		joinStream, err := broker.Subscribe(ctx, JoinTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
@@ -344,7 +342,7 @@ func TestClientConnect(t *testing.T) {
 		}
 
 		// TODO: Should I be waiting for these streams to actually close?
-		client.Unsubscribe(ctx, joinStream)
+		broker.Unsubscribe(ctx, joinStream)
 
 		// Subtle race condition here:
 		//  - After closing the connection, its possible that
@@ -390,7 +388,7 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -398,11 +396,11 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		pongStream, err := client.Subscribe(ctx, PingPongTopic)
+		pongStream, err := broker.Subscribe(ctx, PingPongTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, pongStream)
+		defer broker.Unsubscribe(ctx, pongStream)
 
 		select {
 		case <-pongStream:
@@ -416,7 +414,7 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
@@ -425,11 +423,11 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		poolStepsStream, err := client.Subscribe(ctx, PoolStepsTopic)
+		poolStepsStream, err := broker.Subscribe(ctx, PoolStepsTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, poolStepsStream)
+		defer broker.Unsubscribe(ctx, poolStepsStream)
 
 		select {
 		case <-poolStepsStream:
@@ -438,14 +436,14 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("pooldata from joinOk", func(t *testing.T) {
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
-		poolDataStream, err := client.Subscribe(ctx, PoolDataTopic)
+		poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, poolDataStream)
+		defer broker.Unsubscribe(ctx, poolDataStream)
 
 		go func() {
 			err := client.Connect()
@@ -474,14 +472,14 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
-		poolDataStream, err := client.Subscribe(ctx, PoolDataTopic)
+		poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, poolDataStream)
+		defer broker.Unsubscribe(ctx, poolDataStream)
 		go func() {
 			err := client.Connect()
 			if err != nil {
@@ -510,16 +508,16 @@ func TestClientMessaging(t *testing.T) {
 		PingInterval = 10 * time.Millisecond
 		defer func() { PingInterval = oldPing }()
 
-		client, svr, ctx, cancel := GetFixtures(t)
+		broker, client, svr, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		svr.rMap[PING] = []string{POOLSTEPS_default}
 
-		poolDataStream, err := client.Subscribe(ctx, PoolDataTopic)
+		poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, poolDataStream)
+		defer broker.Unsubscribe(ctx, poolDataStream)
 		go func() {
 			err := client.Connect()
 			if err != nil {
@@ -544,7 +542,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("step and stepOk", func(t *testing.T) {
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -552,11 +550,11 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		stepOkStream, err := client.Subscribe(ctx, StepOkTopic)
+		stepOkStream, err := broker.Subscribe(ctx, StepOkTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, stepOkStream)
+		defer broker.Unsubscribe(ctx, stepOkStream)
 
 		client.Send(ctx, "STEP 35360 0e0000cyk 8b9554VKg 9")
 
@@ -578,7 +576,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("publish solution", func(t *testing.T) {
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -586,11 +584,11 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		solStream, err := client.Subscribe(ctx, SolutionTopic)
+		solStream, err := broker.Subscribe(ctx, SolutionTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, solStream)
+		defer broker.Unsubscribe(ctx, solStream)
 
 		client.Publish(ctx, Solution{
 			Block:     12345,
@@ -617,7 +615,7 @@ func TestClientMessaging(t *testing.T) {
 		}
 	})
 	t.Run("publish job", func(t *testing.T) {
-		client, _, ctx, cancel := GetFixtures(t)
+		broker, client, _, ctx, cancel := GetFixtures(t)
 		defer cancel()
 
 		err := client.Connect()
@@ -625,11 +623,11 @@ func TestClientMessaging(t *testing.T) {
 			t.Fatal("Got an error and didn't expect one: ", err)
 		}
 
-		jobStream, err := client.Subscribe(ctx, JobTopic)
+		jobStream, err := broker.Subscribe(ctx, JobTopic)
 		if err != nil {
 			t.Fatal("Got an error and didn't expect one:", err)
 		}
-		defer client.Unsubscribe(ctx, jobStream)
+		defer broker.Unsubscribe(ctx, jobStream)
 
 		publishedJob := Job{
 			PoolAddr:      "pooladdr",
@@ -665,16 +663,16 @@ func TestClientMessaging(t *testing.T) {
 
 func BenchmarkSend(b *testing.B) {
 	b.Logf("b.N is: %d\n", b.N)
-	client, svr, ctx, cancel := GetFixtures(b)
+	broker, client, svr, ctx, cancel := GetFixtures(b)
 	defer cancel()
 
 	svr.printConnErr = false
-	pingStream, err := client.Subscribe(ctx, PingPongTopic)
+	pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 	if err != nil {
 		b.Fatal("Got an error and didn't expect one:", err)
 	}
 	client.Connect()
-	poolDataStream, err := client.Subscribe(ctx, PoolDataTopic)
+	poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 	if err != nil {
 		b.Fatal("Got an error and didn't expect one:", err)
 	}
@@ -695,15 +693,15 @@ func BenchmarkSend(b *testing.B) {
 }
 
 func BenchmarkSendParallel(b *testing.B) {
-	client, svr, ctx, cancel := GetFixtures(b)
+	broker, client, svr, ctx, cancel := GetFixtures(b)
 	defer cancel()
 	svr.printConnErr = false
-	pingStream, err := client.Subscribe(ctx, PingPongTopic)
+	pingStream, err := broker.Subscribe(ctx, PingPongTopic)
 	if err != nil {
 		b.Fatal("Got an error and didn't expect one:", err)
 	}
 	client.Connect()
-	poolDataStream, err := client.Subscribe(ctx, PoolDataTopic)
+	poolDataStream, err := broker.Subscribe(ctx, PoolDataTopic)
 	if err != nil {
 		b.Fatal("Got an error and didn't expect one:", err)
 	}
@@ -737,15 +735,15 @@ func BenchmarkSendParallel(b *testing.B) {
 // 	var err error
 // 	for n := 0; n < b.N; n++ {
 // 		func() {
-// 			client, svr, done := GetFixtures(b)
+// 			broker, client, svr, done := GetFixtures(b)
 // 			defer close(done)
 // 			svr.printConnErr = false
 // 			err = client.Connect()
 // 			if err != nil {
 // 				b.Fatalf("Failed on connect: %s\n", err.Error())
 // 			}
-// 			pingStream = client.Subscribe(PingPongTopic)
-// 			poolDataStream = client.Subscribe(PoolDataTopic)
+// 			pingStream = broker.Subscribe(PingPongTopic)
+// 			poolDataStream = broker.Subscribe(PoolDataTopic)
 
 // 			client.Send("PING 2")
 
@@ -761,8 +759,8 @@ func BenchmarkSendParallel(b *testing.B) {
 // 				}
 // 			}
 
-// 			client.Unsubscribe(ctx, pingStream)
-// 			client.Unsubscribe(ctx, poolDataStream)
+// 			broker.Unsubscribe(ctx, pingStream)
+// 			broker.Unsubscribe(ctx, poolDataStream)
 
 // 			oldConnect = client.Connected()
 // 			svr.conn.Close()
@@ -777,8 +775,8 @@ func BenchmarkSendParallel(b *testing.B) {
 // 				b.Fatal("Timed out waiting for reconnect")
 // 			}
 
-// 			pingStream = client.Subscribe(PingPongTopic)
-// 			poolDataStream = client.Subscribe(PoolDataTopic)
+// 			pingStream = broker.Subscribe(PingPongTopic)
+// 			poolDataStream = broker.Subscribe(PoolDataTopic)
 
 // 			client.Send("PING 3")
 
@@ -793,8 +791,8 @@ func BenchmarkSendParallel(b *testing.B) {
 // 					b.Fatal("Failed 2 (timeout)")
 // 				}
 // 			}
-// 			client.Unsubscribe(ctx, pingStream)
-// 			client.Unsubscribe(ctx, poolDataStream)
+// 			broker.Unsubscribe(ctx, pingStream)
+// 			broker.Unsubscribe(ctx, poolDataStream)
 // 			// time.Sleep(20 * time.Millisecond)
 // 		}()
 // 	}

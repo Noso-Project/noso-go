@@ -8,10 +8,10 @@ import (
 	"github.com/Noso-Project/noso-go/internal/common"
 )
 
-func SolutionManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) {
+func SolutionManager(ctx context.Context, client *common.Client, broker *common.Broker, wg *sync.WaitGroup) {
 	wg.Done()
 
-	solStream, err := client.Subscribe(ctx, common.SolutionTopic)
+	solStream, err := broker.Subscribe(ctx, common.SolutionTopic)
 	if err != nil {
 		panic(fmt.Sprint("Got an err and didn't expect one", err))
 	}

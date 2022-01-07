@@ -53,8 +53,8 @@ var (
 // TODO: find a way to not use interface{} for the channel
 //       - Already boned on this once
 type Broker struct {
+	// TODO: See if this done channel is still needed
 	done           <-chan struct{}
-	cancel         context.CancelFunc
 	pubStream      chan interface{}
 	subStream      chan topicSubscription
 	unsubStream    chan (<-chan interface{})
@@ -62,11 +62,9 @@ type Broker struct {
 	publishTimeout time.Duration
 }
 
-func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
+func NewBroker(ctx context.Context) (b *Broker) {
 	InitLogger(os.Stdout)
 	b = new(Broker)
-	b.done = ctx.Done()
-	b.cancel = cancel
 	b.pubStream = make(chan interface{}, 0)
 	b.subStream = make(chan topicSubscription, 0)
 	b.unsubStream = make(chan (<-chan interface{}), 0)
@@ -83,10 +81,6 @@ func NewBroker(ctx context.Context, cancel context.CancelFunc) (b *Broker) {
 
 func removeIndex(s []chan interface{}, index int) []chan interface{} {
 	return append(s[:index], s[index+1:]...)
-}
-
-func (b *Broker) Done() <-chan struct{} {
-	return b.done
 }
 
 func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
@@ -109,6 +103,7 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 			return
 		case sub := <-b.subStream:
 			logger.Debug("Entering sub := <-b.subStream")
+			logger.Debugf("Current subs: %v", subs[sub.topic])
 			logger.Debugf("About to sub: topic %v channel %v", sub.topic, sub.subStream)
 			subs[sub.topic] = append(subs[sub.topic], sub.subStream)
 			logger.Debugf("Topics subs now: %v", subs[sub.topic])
@@ -140,7 +135,6 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 			}
 			logger.Debugf("Topics are: %v", topics)
 
-		loop:
 			for _, topic := range topics {
 				logger.Debugf("Streams for topic %v are: %v", topic, subs[topic])
 				for _, stream := range subs[topic] {
@@ -150,9 +144,9 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 					case stream <- msg:
 					case <-time.After(b.publishTimeout):
 						// TODO: Need to log this as an error visible to user
-						logger.Debugf("Client broker is hung on write to %v stream for %s topic", stream, topic)
-						b.cancel()
-						break loop
+						logger.Errorf("Broker is hung on write to %v stream for %s topic", stream, topic)
+						fmt.Printf("Broker is hung on write to %v stream for %s topic\n", stream, topic)
+						// logger.Panicf("Client broker is hung on write to %v stream for %s topic", stream, topic)
 					}
 				}
 				logger.Debug("msg := <-b.pubStream released the lock")

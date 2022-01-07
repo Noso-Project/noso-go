@@ -34,15 +34,16 @@ func TestJobManager(t *testing.T) {
 		defer conn.Close()
 		defer svr.Close()
 
-		client := common.NewClientWithConn(ctx, conn)
+		broker := common.NewBroker(ctx)
+		client := common.NewClientWithConn(ctx, broker, conn)
 
 		wg.Add(1)
-		go JobManager(ctx, client, &wg)
+		go JobManager(ctx, client, broker, &wg)
 		wg.Wait()
 
 		// A miner will publish a request to the JobTopic, requesting a jobStream,
 		// and including in the request a channel to receive the jobStream on
-		jobStream := requestJobStream(ctx, client)
+		jobStream := requestJobStream(ctx, broker)
 
 		// Send a JOINOK from svr to client so PoolData info gets published
 		// The JobManager will get the PoolData message, build a new Job,
@@ -74,15 +75,16 @@ func TestJobManager(t *testing.T) {
 		defer conn.Close()
 		defer svr.Close()
 
-		client := common.NewClientWithConn(ctx, conn)
+		broker := common.NewBroker(ctx)
+		client := common.NewClientWithConn(ctx, broker, conn)
 
 		wg.Add(1)
-		go JobManager(ctx, client, &wg)
+		go JobManager(ctx, client, broker, &wg)
 		wg.Wait()
 
 		// A miner will publish a request to the JobTopic, requesting a jobStream,
 		// and including in the request a channel to receive the jobStream on
-		jobStream := requestJobStream(ctx, client)
+		jobStream := requestJobStream(ctx, broker)
 
 		// Send a JOINOK from svr to client so PoolData info gets published
 		// The JobManager will get the PoolData message, build a new Job,
@@ -122,15 +124,16 @@ func TestJobManager(t *testing.T) {
 		defer conn.Close()
 		defer svr.Close()
 
-		client := common.NewClientWithConn(ctx, conn)
+		broker := common.NewBroker(ctx)
+		client := common.NewClientWithConn(ctx, broker, conn)
 
 		wg.Add(1)
-		go JobManager(ctx, client, &wg)
+		go JobManager(ctx, client, broker, &wg)
 		wg.Wait()
 
 		// A miner will publish a request to the JobTopic, requesting a jobStream,
 		// and including in the request a channel to receive the jobStream on
-		jobStream := requestJobStream(ctx, client)
+		jobStream := requestJobStream(ctx, broker)
 
 		// Send a JOINOK from svr to client so PoolData info gets published
 		// The JobManager will get the PoolData message, build a new Job,
@@ -184,15 +187,16 @@ func BenchmarkJobManager(b *testing.B) {
 	defer conn.Close()
 	defer svr.Close()
 
-	client := common.NewClientWithConn(ctx, conn)
+	broker := common.NewBroker(ctx)
+	client := common.NewClientWithConn(ctx, broker, conn)
 
 	wg.Add(1)
-	go JobManager(ctx, client, &wg)
+	go JobManager(ctx, client, broker, &wg)
 	wg.Wait()
 
 	// A miner will publish a request to the JobTopic, requesting a jobStream,
 	// and including in the request a channel to receive the jobStream on
-	jobStream := requestJobStream(ctx, client)
+	jobStream := requestJobStream(ctx, broker)
 
 	// Send a JOINOK from svr to client so PoolData info gets published
 	// The JobManager will get the PoolData message, build a new Job,

@@ -25,10 +25,11 @@ func TestSolutionManager(t *testing.T) {
 	defer conn.Close()
 	defer svr.Close()
 
-	client := common.NewClientWithConn(ctx, conn)
+	broker := common.NewBroker(ctx)
+	client := common.NewClientWithConn(ctx, broker, conn)
 
 	wg.Add(1)
-	go SolutionManager(ctx, client, &wg)
+	go SolutionManager(ctx, client, broker, &wg)
 	wg.Wait()
 
 	sol := common.Solution{
@@ -38,7 +39,7 @@ func TestSolutionManager(t *testing.T) {
 		TargetLen: 54321,
 	}
 
-	client.Publish(ctx, sol)
+	broker.Publish(ctx, sol)
 
 	scanner := bufio.NewScanner(svr)
 	scanner.Scan()

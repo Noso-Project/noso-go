@@ -16,7 +16,7 @@ const (
 	hashableSeedChars = "!\"#$&')*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|"
 )
 
-func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) {
+func JobManager(ctx context.Context, client *common.Client, broker *common.Broker, wg *sync.WaitGroup) {
 
 	// TODO: Need to wrap this in a for loop and then detect a client reconnect and start over
 	//       Might need a sync.Cond from the client for that
@@ -37,7 +37,10 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 				count := jobCount
 				mu.Unlock()
 				actual := count - oldCount
-				fmt.Printf("%s -  %7d jobs (%d jobs/second)\n", time.Now(), actual, int(actual/10))
+				now := time.Now()
+				// t, _ := time.Parse("2006-01-02", now.String())
+				nowFormatted := now.Format(time.RFC1123)
+				fmt.Printf("%s -  %7d jobs (%d jobs/second)\n", nowFormatted, actual, int(actual/10))
 				oldCount = count
 			}
 		}
@@ -47,18 +50,18 @@ func JobManager(ctx context.Context, client *common.Client, wg *sync.WaitGroup) 
 
 	jobStream := make(chan common.Job, 0)
 
-	jobTopicStream, err := client.Subscribe(ctx, common.JobTopic)
+	jobTopicStream, err := broker.Subscribe(ctx, common.JobTopic)
 	if err != nil {
 		panic(err)
 	}
 
-	defer client.Unsubscribe(ctx, jobTopicStream)
+	defer broker.Unsubscribe(ctx, jobTopicStream)
 
-	poolDataStream, err := client.Subscribe(ctx, common.PoolDataTopic)
+	poolDataStream, err := broker.Subscribe(ctx, common.PoolDataTopic)
 	if err != nil {
 		panic(err)
 	}
-	defer client.Unsubscribe(ctx, poolDataStream)
+	defer broker.Unsubscribe(ctx, poolDataStream)
 
 	// TODO: This is here because the JobManager needs to be listening to JobTopic
 	//       stream before JoinOk is received. Should probably do this another way
@@ -141,6 +144,7 @@ type jobBuilder struct {
 	step         int
 	poolDepth    int
 	mu           *sync.Mutex
+	once         sync.Once
 }
 
 func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
@@ -165,6 +169,8 @@ func (j *jobBuilder) builder(ctx context.Context, wg *sync.WaitGroup) {
 
 	jobCtx, jobCancel := context.WithCancel(ctx)
 
+	// TODO: I should probably cancel jobs on client disconnect, and
+	//       stop feeding new jobs unil new JoinOk received
 seedLoop:
 	for {
 		seedBase := j.seedFromPool[:len(j.seedFromPool)-3]
@@ -233,7 +239,7 @@ func (j *jobBuilder) Update(poolData interface{}) common.ServerMessageType {
 			j.step = poolData.(common.JoinOk).CurrentStep
 			j.poolDepth = poolData.(common.JoinOk).PoolDepth
 		}()
-		close(j.joined)
+		j.once.Do(func() { close(j.joined) })
 		return common.JOINOK
 	case common.PoolSteps:
 		var oldBlock int
@@ -280,10 +286,10 @@ func seedCharGen(ctx context.Context, stream chan string) {
 	}
 }
 
-func requestJobStream(ctx context.Context, client *common.Client) <-chan common.Job {
+func requestJobStream(ctx context.Context, broker *common.Broker) <-chan common.Job {
 
 	stream := make(chan (<-chan common.Job), 0)
-	client.Publish(ctx, common.JobStreamReq{Stream: stream})
+	broker.Publish(ctx, common.JobStreamReq{Stream: stream})
 
 	select {
 	case s := <-stream:

@@ -29,12 +29,12 @@ var (
 	ErrAlreadyConnected = errors.New("Failed to join pool: already connected")
 )
 
-func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Client) {
+func NewClient(ctx context.Context, broker *Broker, poolAddr string, poolPort int) (client *Client) {
 	// TODO: need to formalize done channels throughout
 	// TODO: need to pass in poolPassword and walletAddress
 	InitLogger(os.Stdout)
 	client = &Client{
-		parentCtx:       ctx,
+		broker:          broker,
 		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
 		auth:            "password leviable6",
 		mu:              new(sync.Mutex),
@@ -59,11 +59,11 @@ func NewClient(ctx context.Context, poolAddr string, poolPort int) (client *Clie
 	return client
 }
 
-func NewClientWithConn(ctx context.Context, conn net.Conn) (client *Client) {
+func NewClientWithConn(ctx context.Context, broker *Broker, conn net.Conn) (client *Client) {
 	InitLogger(os.Stdout)
 
 	client = &Client{
-		parentCtx:       ctx,
+		broker:          broker,
 		poolAddr:        net.JoinHostPort("", strconv.Itoa(0)),
 		auth:            "",
 		conn:            conn,
@@ -94,9 +94,7 @@ func NewClientWithConn(ctx context.Context, conn net.Conn) (client *Client) {
 }
 
 type Client struct {
-	// TODO: Evaluate using a context instead of done channel
 	// TODO: Set auth
-	parentCtx    context.Context
 	poolAddr     string
 	auth         string // "poolPw walletAddr"
 	conn         net.Conn
@@ -124,7 +122,6 @@ func (c *Client) init(ctx context.Context, cancel context.CancelFunc) {
 	defer c.mu.Unlock()
 	c.connected = make(chan struct{}, 0)
 	c.joined = make(chan struct{}, 0)
-	c.broker = NewBroker(ctx, cancel)
 
 	logger.Debug("Client initialized")
 
@@ -163,9 +160,10 @@ func (c *Client) start(parentCtx context.Context, started chan struct{}, withCon
 			err := c.connect(ctx)
 			if err != nil {
 				switch err.(error) {
-				case ErrAlreadyConnected:
+				case ErrAlreadyConnected, ErrJoinTimeout:
+					// TODO: would need to return here if user disables retry
+					logger.Error(err)
 					cancel()
-					continue
 				default:
 					select {
 					case c.doConnectErr <- err:
@@ -182,7 +180,7 @@ func (c *Client) start(parentCtx context.Context, started chan struct{}, withCon
 		}
 
 		select {
-		case <-c.parentCtx.Done():
+		case <-parentCtx.Done():
 			logger.Debug("<-parentCtx.Done() closed")
 			if c.conn != nil {
 				c.conn.Close()
@@ -215,6 +213,8 @@ func (c *Client) Joined() chan struct{} {
 	defer c.mu.Unlock()
 	return c.joined
 }
+
+// TODO: Should I be passing a context in here?
 func (c *Client) Connect() error {
 	close(c.doConnect)
 	// TODO: Leaking a goroutine here, need to bail out if <-ctx.Done()
@@ -236,13 +236,13 @@ func (c *Client) connect(ctx context.Context) (err error) {
 	close(c.connected)
 
 	logger.Debug("Subscribing to JoinTopic")
-	joinStream, err := c.Subscribe(ctx, JoinTopic)
+	joinStream, err := c.subscribe(ctx, JoinTopic)
 	if err != nil {
 		return err
 	}
-	logger.Debug("Subscribed to JoinTopic for stream: ", joinStream)
-	defer logger.Debug("deferred Unsubscribe for ", joinStream)
-	defer c.Unsubscribe(ctx, joinStream)
+	logger.Debug("subscribed to JoinTopic for stream: ", joinStream)
+	defer logger.Debug("deferred unsubscribe for ", joinStream)
+	defer c.unsubscribe(ctx, joinStream)
 
 	// TODO: Might need to explicitely separate connect and join,
 	//       as its possible a secondary client might want to connect,
@@ -272,6 +272,11 @@ func (c *Client) join(ctx context.Context) {
 	c.Send(ctx, "JOIN ng9.9.9")
 }
 
+// TODO: Should I be queueing these incase connection is lost,
+//       and then send when reconnected?
+// TODO: Should I be queueing these until send is confirmed,
+//       so that a send isn't dropped during a reconnect event?
+//       and then send when reconnected?
 // TODO: Pass in Tx objects here instead of strings
 func (c *Client) Send(ctx context.Context, msg string) {
 	go func(msg string) {
@@ -298,22 +303,22 @@ func (c *Client) Publish(ctx context.Context, pub interface{}) {
 }
 
 // TODO: Really shouldn't use chan interface{} here
-func (c *Client) Subscribe(ctx context.Context, topic Topic) (<-chan interface{}, error) {
-	// TODO: There is an expectation here that Subscribe blocks
+func (c *Client) subscribe(ctx context.Context, topic Topic) (<-chan interface{}, error) {
+	// TODO: There is an expectation here that subscribe blocks
 	//       until we are actually subscribed
 	c.mu.Lock()
-	logger.Debug("Subscribe() has the lock")
-	defer logger.Debug("Subscribe() released the lock")
+	logger.Debug("subscribe() has the lock")
+	defer logger.Debug("subscribe() released the lock")
 	defer c.mu.Unlock()
 	return c.broker.Subscribe(ctx, topic)
 }
 
 // TODO: Really shouldn't use chan interface{} here
 // TODO: Need to return an error here
-func (c *Client) Unsubscribe(ctx context.Context, unsubStream <-chan interface{}) {
+func (c *Client) unsubscribe(ctx context.Context, unsubStream <-chan interface{}) {
 	c.mu.Lock()
-	logger.Debug("Unsubscribe() has the lock")
-	defer logger.Debug("Unsubscribe() released the lock")
+	logger.Debug("unsubscribe() has the lock")
+	defer logger.Debug("unsubscribe() released the lock")
 	defer c.mu.Unlock()
 	c.broker.Unsubscribe(ctx, unsubStream)
 }
