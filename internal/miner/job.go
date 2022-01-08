@@ -24,7 +24,7 @@ func JobManager(ctx context.Context, client *common.Client, broker *common.Broke
 
 	go func(mu *sync.Mutex) {
 		oldCount := 0
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(60 * time.Second)
 		for {
 			select {
 			case <-ctx.Done():
@@ -37,7 +37,7 @@ func JobManager(ctx context.Context, client *common.Client, broker *common.Broke
 				now := time.Now()
 				// t, _ := time.Parse("2006-01-02", now.String())
 				nowFormatted := now.Format(time.RFC1123)
-				fmt.Printf("%s -  %7d jobs (%d jobs/second)\n", nowFormatted, actual, int(actual/10))
+				fmt.Printf("%s -  %7d jobs (%d jobs/second)\n", nowFormatted, actual, int(actual/60))
 				oldCount = count
 			}
 		}

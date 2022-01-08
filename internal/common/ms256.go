@@ -46,13 +46,17 @@ func (m *MultiStep256) Hash(hashStr string) (hashed string) {
 	return m.HashedString
 }
 
-func (m *MultiStep256) Search(targets []string) string {
+func (m *MultiStep256) Search(targets []string) (match string) {
+	// fmt.Println("Targets are:", targets)
+	if !strings.Contains(m.HashedString, targets[0]) {
+		return
+	}
 	for _, target := range targets {
 		if strings.Contains(m.HashedString, target) {
-			return target
+			match = target
 		}
 	}
-	return ""
+	return
 }
 
 // TODO: This might not be needed

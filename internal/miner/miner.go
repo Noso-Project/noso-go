@@ -15,7 +15,7 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 	wg.Done()
 	jobStream := requestJobStream(ctx, broker)
 
-	for x := 0; x < 12; x++ {
+	for x := 0; x < 6; x++ {
 		go func(name int) {
 			var (
 				hasher    *common.MultiStep256
@@ -59,7 +59,7 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 					solution = hasher.Search(targets)
 
 					if solution != "" {
-						fmt.Printf("Miner %d found a solution - %v\n", name, h)
+						fmt.Printf("Miner %2d found a %2d char solution - %v\n", name, len(solution), h)
 						broker.Publish(ctx, common.Solution{
 							Block:     job.Block,
 							Seed:      job.MinerSeedBase,

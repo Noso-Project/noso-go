@@ -36,7 +36,7 @@ func NewClient(ctx context.Context, broker *Broker, poolAddr string, poolPort in
 	client = &Client{
 		broker:          broker,
 		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		auth:            "password leviable6",
+		auth:            "password leviable7",
 		mu:              new(sync.Mutex),
 		sendStream:      make(chan string, 0),
 		doConnect:       make(chan struct{}),
