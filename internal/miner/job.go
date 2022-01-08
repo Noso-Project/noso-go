@@ -6,14 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Noso-Project/noso-go/internal/common"
-)
-
-const (
-	hashableSeedChars = "!\"#$&')*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|"
 )
 
 func JobManager(ctx context.Context, client *common.Client, broker *common.Broker, wg *sync.WaitGroup) {
@@ -179,7 +176,7 @@ seedLoop:
 		for num := 1; num < 999; num++ {
 			postfix := ver + fmt.Sprintf("%03d", num)
 			fullSeed := seed + j.poolAddr + postfix
-			job = j.newJob(jobCtx, seed, fullSeed)
+			job = j.newJob(jobCtx, seed, postfix, fullSeed)
 			select {
 			case <-j.newBlock:
 				// Cancel old jobs
@@ -194,14 +191,15 @@ seedLoop:
 	}
 }
 
-func (j *jobBuilder) newJob(ctx context.Context, minerSeedBase, minerSeed string) (job common.Job) {
+func (j *jobBuilder) newJob(ctx context.Context, minerSeedBase, minerPostfix, minerSeed string) (job common.Job) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	job = common.NewJob(ctx)
 	job.PoolAddr = j.poolAddr
 	job.MinerSeedBase = minerSeedBase
+	job.MinerPostfix = minerPostfix
 	job.MinerSeed = minerSeed
-	job.TargetString = j.targetString
+	job.TargetString = strings.ToLower(j.targetString)
 	job.TargetChars = j.targetChars
 	job.Diff = j.diff
 	job.Block = j.block
@@ -267,7 +265,7 @@ func seedCharGen(ctx context.Context, stream chan string) {
 
 	// Randomize seed chars so that if a miner restarts in the middle of a block,
 	// it isn't rehashing already hashed values
-	seedChars := []rune(hashableSeedChars)
+	seedChars := []rune(common.HashableSeedChars)
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(seedChars), func(i, j int) { seedChars[i], seedChars[j] = seedChars[j], seedChars[i] })
 

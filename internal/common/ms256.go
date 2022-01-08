@@ -5,7 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"reflect"
+	"strings"
 	"unsafe"
+)
+
+const (
+	HashableSeedChars = "!\"#$&')*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|"
 )
 
 func MultiStep256Hash(val string) string {
@@ -23,12 +28,13 @@ func NewMultiStep256(seed string) *MultiStep256 {
 }
 
 type MultiStep256 struct {
-	tmp     [32]byte
-	val     string
-	encoded []byte
-	seed    []byte
-	buff    *bytes.Buffer
-	seedLen int
+	HashedString string
+	tmp          [32]byte
+	val          string
+	encoded      []byte
+	seed         []byte
+	buff         *bytes.Buffer
+	seedLen      int
 }
 
 func (m *MultiStep256) Hash(hashStr string) (hashed string) {
@@ -36,9 +42,20 @@ func (m *MultiStep256) Hash(hashStr string) (hashed string) {
 	m.buff.WriteString(hashStr)
 	m.tmp = sha256.Sum256(m.buff.Bytes())
 	hex.Encode(m.encoded, m.tmp[:])
-	return BytesToString(m.encoded)
+	m.HashedString = BytesToString(m.encoded)
+	return m.HashedString
 }
 
+func (m *MultiStep256) Search(targets []string) string {
+	for _, target := range targets {
+		if strings.Contains(m.HashedString, target) {
+			return target
+		}
+	}
+	return ""
+}
+
+// TODO: This might not be needed
 func (m *MultiStep256) Reset() {
 	m.buff.Truncate(m.seedLen)
 }

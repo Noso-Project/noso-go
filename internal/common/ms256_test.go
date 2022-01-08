@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -50,6 +51,86 @@ func TestMultiStep256(t *testing.T) {
 	})
 }
 
+func TestMultiStep256Search(t *testing.T) {
+	examples := []struct {
+		name    string
+		seed    string
+		next    string
+		targets []string
+		want    string
+	}{
+		{
+			name:    "no match",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"11111111"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "",
+		},
+		{
+			name:    "one target beginning",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"5a552449"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "5a552449",
+		},
+		{
+			name:    "one target middle",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"c35c2641"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "c35c2641",
+		},
+		{
+			name:    "one target end",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"64e50414"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "64e50414",
+		},
+		{
+			name:    "two target beginning",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"11111111", "5a552449"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "5a552449",
+		},
+		{
+			name:    "two target middle",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"11111111", "c35c2641"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "c35c2641",
+		},
+		{
+			name:    "two target end",
+			seed:    "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001",
+			next:    "0000",
+			targets: []string{"11111111", "64e50414"},
+			// Hashed string: 5a552449a9b72943989afc35c2641d7ae2e2863063191e132d9d0df164e50414
+			want: "64e50414",
+		},
+	}
+
+	for _, tt := range examples {
+		t.Run(tt.name, func(t *testing.T) {
+			hasher := NewMultiStep256(tt.seed)
+			hasher.Hash(tt.next)
+			got := hasher.Search(tt.targets)
+			want := tt.want
+
+			if got != want {
+				t.Errorf("got %s, want %s", got, want)
+			}
+		})
+	}
+}
+
 func BenchmarkMsBasic(b *testing.B) {
 	b.Logf("b.N is: %d\n", b.N)
 	val := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf11001"
@@ -67,4 +148,45 @@ func BenchmarkMsFast(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		hasher.Hash(next)
 	}
+}
+
+func BenchmarkMsFastParallel(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+
+	b.RunParallel(func(pb *testing.PB) {
+		seed := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf1"
+		next := "1001"
+		hasher := NewMultiStep256(seed)
+		for pb.Next() {
+			hasher.Hash(next)
+		}
+	})
+}
+
+// strings.Contains bumps time from ~185 ms/op to ~320 ns/op
+// The lengh of the search string does not impact ns/op values
+//     in any meaningful way
+func BenchmarkTargetSearch(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	hasher := NewMultiStep256(seed)
+	for n := 0; n < b.N; n++ {
+		hasher.Hash(fmt.Sprintf("%04d", n))
+		hasher.Search([]string{"1234567890123456"})
+	}
+}
+
+func BenchmarkTargetSearchParallel(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	b.RunParallel(func(pb *testing.PB) {
+
+		seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+		hasher := NewMultiStep256(seed)
+		count := 0
+		for pb.Next() {
+			count++
+			hasher.Hash(fmt.Sprintf("%04d", count))
+			hasher.Search([]string{"1234567890123456"})
+		}
+	})
 }

@@ -106,6 +106,8 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 			logger.Debugf("Current subs: %v", subs[sub.topic])
 			logger.Debugf("About to sub: topic %v channel %v", sub.topic, sub.subStream)
 			subs[sub.topic] = append(subs[sub.topic], sub.subStream)
+			// TODO: Creating more and more subs here without cleaning them out
+			//       Can duplicate by connecting to a python -m http.server and watching logs
 			logger.Debugf("Topics subs now: %v", subs[sub.topic])
 			// TODO: Return an err here, if there is one to return?
 			sub.errStream <- nil
@@ -119,9 +121,13 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 			for k, v := range subs {
 				for idx, stream := range v[:] {
 					if stream == unsubStream {
+						logger.Debugf("Subs before: %v", subs)
 						subs[k] = removeIndex(subs[k], idx)
+						logger.Debugf("Subs after: %v", subs)
 						logger.Debugf("Closing stream: %v", stream)
 						close(stream)
+					} else {
+						logger.Debugf("Stream %v != stream %v", unsubStream, stream)
 					}
 				}
 			}
