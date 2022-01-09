@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"testing"
 )
@@ -238,3 +240,127 @@ func BenchmarkTargetSearchParallel(b *testing.B) {
 		}
 	})
 }
+
+// ##################################################################
+// #
+// # Test Sha256Sum vs New + Write + Sum
+// #
+// ##################################################################
+
+func BenchmarkSpeedTest1a(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	seedByte := []byte(seed)
+	for n := 0; n < b.N; n++ {
+		sha256.Sum256(seedByte)
+	}
+}
+
+func BenchmarkSpeedTest1b(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	seedByte := []byte(seed)
+	hasher := sha256.New()
+	hasher.Write(seedByte)
+	for n := 0; n < b.N; n++ {
+		hasher.Sum(nil)
+	}
+}
+
+// Conclusion: Sha256Sum is faster : 142 ns/op vs 182 ns/op
+
+// ##################################################################
+// #
+// # Test String-to-Byte conversion on every loop
+// #
+// ##################################################################
+
+func BenchmarkSpeedTest2a(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	seedByte := []byte(seed)
+	for n := 0; n < b.N; n++ {
+		sha256.Sum256(seedByte)
+	}
+}
+
+func BenchmarkSpeedTest2b(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	for n := 0; n < b.N; n++ {
+		sha256.Sum256([]byte(seed))
+	}
+}
+
+// Conclusion: single conversion is faster : 142 ns/op vs 214 ns/op
+
+// ##################################################################
+// #
+// # Test Using a bytes.buffer Write vs WriteString vs WriteRune
+// #
+// ##################################################################
+
+func BenchmarkSpeedTest3a(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	buff := bytes.NewBuffer([]byte(seed))
+	seedLen := buff.Len()
+	newWrite := []byte("ASDF")
+	for n := 0; n < b.N; n++ {
+		buff.Truncate(seedLen)
+		buff.Write(newWrite)
+		sha256.Sum256(buff.Bytes())
+	}
+}
+
+func BenchmarkSpeedTest3b(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	buff := bytes.NewBuffer([]byte(seed))
+	seedLen := buff.Len()
+	for n := 0; n < b.N; n++ {
+		buff.Truncate(seedLen)
+		buff.WriteString("ASDF")
+		sha256.Sum256(buff.Bytes())
+	}
+}
+
+func BenchmarkSpeedTest3c(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	buff := bytes.NewBuffer([]byte(seed))
+	seedLen := buff.Len()
+	for n := 0; n < b.N; n++ {
+		buff.Truncate(seedLen)
+		buff.WriteRune('A')
+		buff.WriteRune('S')
+		buff.WriteRune('D')
+		buff.WriteRune('F')
+		sha256.Sum256(buff.Bytes())
+	}
+}
+
+// Conclusion: Write and Writestirng are equal, 4 WriteRune is slower (~147 ns/op vs 156 ns/op)
+
+// ##################################################################
+// #
+// # Test PreComputing and converting additional hashes
+// #
+// ##################################################################
+
+func BenchmarkSpeedTest4a(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	hashes := allHashes()
+	hashesLen := len(hashes)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
+	buff := bytes.NewBufferString(seed)
+	seedLen := buff.Len()
+	for n := 0; n < b.N; n++ {
+		c := n % hashesLen
+		buff.Truncate(seedLen)
+		buff.Write(hashes[c])
+		sha256.Sum256(buff.Bytes())
+	}
+}
+
+// Conclusion: Definitely worth doing

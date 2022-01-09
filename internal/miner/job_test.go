@@ -58,7 +58,7 @@ func TestJobManager(t *testing.T) {
 		}
 
 		assertMsgAttrs(t, job.PoolAddr, "N6VxgLSpbni8kLbyUAjYXdHCPt2VEp")
-		assertMsgAttrs(t, job.TargetString, "E1151A4F79E6394F6897A913ADCD476B")
+		assertMsgAttrs(t, job.TargetString, "e1151a4f79e6394f6897a913adcd476b")
 		assertMsgAttrs(t, job.TargetChars, 11)
 		assertMsgAttrs(t, job.Diff, 102)
 		assertMsgAttrs(t, job.Block, 37873)

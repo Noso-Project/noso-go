@@ -15,7 +15,7 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 	wg.Done()
 	jobStream := requestJobStream(ctx, broker)
 
-	for x := 0; x < 6; x++ {
+	for x := 0; x < 1; x++ {
 		go func(name int) {
 			var (
 				hasher    *common.MultiStep256
@@ -23,12 +23,17 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 				targets   []string
 				targetMin int
 				val       string
+				valBytes  []byte
 				solution  string
 			)
 
+			jobStart := time.Now()
 		jobLoop:
 			for job = range jobStream {
+				hashCount := 0
 				// fmt.Printf("Pulled job: %+v\n", job)
+				// fmt.Printf("Pulled job after %s\n", time.Since(jobStart))
+				jobStart = time.Now()
 				hasher = common.NewMultiStep256(job.MinerSeed)
 
 				targetMin = (job.Diff / 10) + 1 - job.PoolDepth
@@ -41,7 +46,10 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 
 				// fmt.Printf("Targets: %v\n", targets)
 
-				for val = range job.Gen(ctx) {
+				for valBytes = range job.GenBytes(ctx) {
+					// fmt.Println("Gen'd bytes:", valBytes)
+					// start := time.Now()
+					hashCount++
 					// fmt.Printf("Pulled val: %v\n", val)
 					// time.Sleep(time.Second)
 					// TODO: Might be more advantageous to check these on an interval than on every loop,
@@ -54,9 +62,11 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 					default:
 					}
 
-					hasher.Reset()
-					h := hasher.Hash(val)
+					// hasher.Reset()
+					h := hasher.HashTest(valBytes)
 					solution = hasher.Search(targets)
+					// fmt.Printf("Took %s to do hash and first search\n", time.Since(start))
+					// time.Sleep(time.Second)
 
 					if solution != "" {
 						fmt.Printf("Miner %2d found a %2d char solution - %v\n", name, len(solution), h)
@@ -68,6 +78,9 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 						})
 					}
 				}
+				stop := time.Now()
+				report := common.NewHashRateReport(fmt.Sprintf("Miner %2d", name), hashCount, jobStart, stop)
+				fmt.Printf("%s - %s\n", report.MinerName, report)
 			}
 		}(x)
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -59,6 +60,7 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
 					for _, z = range hashChars {
+						start := time.Now()
 						hashCount++
 						buff.Truncate(seedLen)
 
@@ -80,8 +82,11 @@ func Miner(workerNum string, comms *Comms, ready chan bool) {
 							// targets[0] is that absolute minimum that a pool will accept
 							// if we dont match that minimum, we can drop this solution
 							// and continue with the hashing
+							fmt.Printf("Took %s to do hash and first search\n", time.Since(start))
+							// time.Sleep(time.Second)
 							continue
 						}
+						// time.Sleep(time.Second)
 
 						targetLen = targetMin
 						for _, t := range targets[1:] {

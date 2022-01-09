@@ -21,9 +21,10 @@ func NewMultiStep256(seed string) *MultiStep256 {
 	m := new(MultiStep256)
 	m.encoded = make([]byte, 64)
 	m.seed = []byte(seed)
-	m.seedLen = len(m.seed)
+	m.seedLen = len(seed)
 	m.buff = bytes.NewBuffer(m.seed)
-	m.tmp = sha256.Sum256(m.buff.Bytes())
+	m.buffLen = m.buff.Len()
+	// m.tmp = sha256.Sum256(m.buff.Bytes())
 	return m
 }
 
@@ -34,12 +35,22 @@ type MultiStep256 struct {
 	encoded      []byte
 	seed         []byte
 	buff         *bytes.Buffer
+	buffLen      int
 	seedLen      int
 }
 
 func (m *MultiStep256) Hash(hashStr string) (hashed string) {
 	defer m.Reset()
 	m.buff.WriteString(hashStr)
+	m.tmp = sha256.Sum256(m.buff.Bytes())
+	hex.Encode(m.encoded, m.tmp[:])
+	m.HashedString = BytesToString(m.encoded)
+	return m.HashedString
+}
+
+func (m *MultiStep256) HashTest(h []byte) (hashed string) {
+	m.Reset()
+	m.buff.Write(h)
 	m.tmp = sha256.Sum256(m.buff.Bytes())
 	hex.Encode(m.encoded, m.tmp[:])
 	m.HashedString = BytesToString(m.encoded)
@@ -61,7 +72,7 @@ func (m *MultiStep256) Search(targets []string) (match string) {
 
 // TODO: This might not be needed
 func (m *MultiStep256) Reset() {
-	m.buff.Truncate(m.seedLen)
+	m.buff.Truncate(m.buffLen)
 }
 
 func BytesToString(bytes []byte) string {
