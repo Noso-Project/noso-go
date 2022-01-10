@@ -34,8 +34,10 @@ func NewClient(ctx context.Context, broker *Broker, poolAddr string, poolPort in
 	// TODO: need to pass in poolPassword and walletAddress
 	InitLogger(os.Stdout)
 	client = &Client{
-		broker:          broker,
-		poolAddr:        net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
+		broker:   broker,
+		poolAddr: net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
+		// auth:     "UnMaTcHeD leviable8",
+		// auth:            "password leviable8",
 		auth:            "password leviable7",
 		mu:              new(sync.Mutex),
 		sendStream:      make(chan string, 0),

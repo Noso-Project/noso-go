@@ -1,7 +1,6 @@
 package common
 
 import (
-	"log"
 	"math/rand"
 	"time"
 
@@ -14,7 +13,8 @@ var instanceId = getInstanceId()
 func getMachineId() string {
 	id, err := machineid.ProtectedID("noso-go")
 	if err != nil {
-		log.Fatal(err)
+		// log.Error(err)
+		id = "123456"
 	}
 
 	return id[:6]

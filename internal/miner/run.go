@@ -12,7 +12,8 @@ func Run(ctx context.Context) error {
 	defer cancel()
 
 	broker := common.NewBroker(ctx)
-	client := common.NewClient(ctx, broker, "pool.noso.dev", 8082)
+	// client := common.NewClient(ctx, broker, "pool.noso.dev", 8082)
+	client := common.NewClient(ctx, broker, "devnosoeu.nosocoin.com", 8082)
 
 	var wg sync.WaitGroup
 
@@ -39,7 +40,9 @@ func RunMiner(ctx context.Context) error {
 	defer cancel()
 
 	broker := common.NewBroker(ctx)
-	client := common.NewClient(ctx, broker, "pool.noso.dev", 8082)
+	// client := common.NewClient(ctx, broker, "pool.noso.dev", 8082)
+	client := common.NewClient(ctx, broker, "164.90.252.232", 8082)
+	// client := common.NewClient(ctx, broker, "devnosoeu.nosocoin.com", 8082)
 
 	var wg sync.WaitGroup
 
