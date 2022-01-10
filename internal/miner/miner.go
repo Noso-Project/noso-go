@@ -16,12 +16,12 @@ import (
 
 const hashChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.Broker, wg *sync.WaitGroup) {
+func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.Broker, opts common.Opts, wg *sync.WaitGroup) {
 	time.Sleep(time.Second)
 	wg.Done()
 	jobStream := requestJobStream(ctx, broker)
 
-	for x := 0; x < 12; x++ {
+	for x := 0; x < opts.Cpu; x++ {
 		go func(name int) {
 			var (
 				// hasher    *common.MultiStep256

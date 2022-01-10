@@ -30,7 +30,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Noso-Project/noso-go/internal/miner-bak"
+	"github.com/Noso-Project/noso-go/internal/common"
+	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
 
@@ -38,13 +39,13 @@ var (
 	list     bool
 	info     bool
 	pools    map[string]PoolInfo
-	poolOpts = &miner.Opts{}
+	poolOpts = &common.Opts{}
 )
 
 type PoolInfo struct {
 	primary string
 	aliases []string
-	opts    *miner.Opts
+	opts    *common.Opts
 }
 
 // poolCmd represents the pool command
@@ -120,7 +121,7 @@ Start mining with a pool
 		poolOpts.IpPort = pool.opts.IpPort
 		poolOpts.PoolPw = pool.opts.PoolPw
 
-		miner.Mine(poolOpts)
+		miner.Run(*poolOpts)
 	},
 }
 
@@ -177,7 +178,7 @@ func loadPools() {
 	pools["devnoso"] = PoolInfo{
 		primary: "devnoso",
 		aliases: []string{"devnoso", "devnosoeu", "devnoso.eu"},
-		opts: &miner.Opts{
+		opts: &common.Opts{
 			IpAddr: "DevNosoEU.nosocoin.com",
 			IpPort: 8082,
 			PoolPw: "UnMaTcHeD",
@@ -186,7 +187,7 @@ func loadPools() {
 	pools["leviable"] = PoolInfo{
 		primary: "leviable",
 		aliases: []string{"leviable", "nosodev", "noso.dev", "poolnosodev", "pool.noso.dev"},
-		opts: &miner.Opts{
+		opts: &common.Opts{
 			IpAddr: "pool.noso.dev",
 			IpPort: 8082,
 			PoolPw: "password",
@@ -195,7 +196,7 @@ func loadPools() {
 	pools["dukedog"] = PoolInfo{
 		primary: "dukedog",
 		aliases: []string{"dukedogio", "dukedog.io", "duke"},
-		opts: &miner.Opts{
+		opts: &common.Opts{
 			IpAddr: "noso.dukedog.io",
 			IpPort: 8082,
 			PoolPw: "duke",
@@ -204,7 +205,7 @@ func loadPools() {
 	pools["russiapool"] = PoolInfo{
 		primary: "russiapool",
 		aliases: []string{"russiapool"},
-		opts: &miner.Opts{
+		opts: &common.Opts{
 			IpAddr: "95.54.44.147",
 			IpPort: 8082,
 			PoolPw: "RussiaPool",

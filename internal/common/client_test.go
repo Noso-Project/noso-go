@@ -22,7 +22,8 @@ func GetFixtures(t testing.TB) (*Broker, *Client, *TcpServer, context.Context, c
 	r := make(respMap)
 	broker := NewBroker(ctx)
 	svr := NewTcpServer(ctx, t, r)
-	client := NewClient(ctx, broker, svr.Host, svr.Port)
+	opts := Opts{IpAddr: svr.Host, IpPort: svr.Port, Wallets: []string{"dummywallet"}, PoolPw: "dummypassword"}
+	client := NewClient(ctx, broker, opts)
 
 	return broker, client, svr, ctx, cancel
 }
@@ -35,7 +36,8 @@ func TestClientConnect(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		broker := NewBroker(ctx)
-		got := NewClient(ctx, broker, DUMMYADDR, DUMMYPORT).poolAddr
+		opts := Opts{IpAddr: DUMMYADDR, IpPort: DUMMYPORT, Wallets: []string{"dummywallet"}, PoolPw: "dummypassword"}
+		got := NewClient(ctx, broker, opts).poolAddr
 		want := fmt.Sprintf("%s:%d", DUMMYADDR, DUMMYPORT)
 
 		if got != want {

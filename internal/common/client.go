@@ -29,16 +29,14 @@ var (
 	ErrAlreadyConnected = errors.New("Failed to join pool: already connected")
 )
 
-func NewClient(ctx context.Context, broker *Broker, poolAddr string, poolPort int) (client *Client) {
+func NewClient(ctx context.Context, broker *Broker, opts Opts) (client *Client) {
 	// TODO: need to formalize done channels throughout
 	// TODO: need to pass in poolPassword and walletAddress
 	InitLogger(os.Stdout)
 	client = &Client{
-		broker:   broker,
-		poolAddr: net.JoinHostPort(poolAddr, strconv.Itoa(poolPort)),
-		// auth:     "UnMaTcHeD leviable8",
-		// auth:            "password leviable8",
-		auth:            "password leviable7",
+		broker:          broker,
+		poolAddr:        net.JoinHostPort(opts.IpAddr, strconv.Itoa(opts.IpPort)),
+		auth:            fmt.Sprintf("%s %s", opts.PoolPw, opts.Wallets[0]),
 		mu:              new(sync.Mutex),
 		sendStream:      make(chan string, 0),
 		doConnect:       make(chan struct{}),

@@ -27,12 +27,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/Noso-Project/noso-go/internal/miner-bak"
+	"github.com/Noso-Project/noso-go/internal/common"
+	"github.com/Noso-Project/noso-go/internal/miner"
 	"github.com/spf13/cobra"
 )
 
 var (
-	mineOpts = &miner.Opts{}
+	mineOpts = &common.Opts{}
 )
 
 var mineCmd = &cobra.Command{
@@ -66,7 +67,7 @@ Example usage:
 		}
 		mineOpts.IpAddr = ipAddr
 
-		miner.Mine(mineOpts)
+		miner.Run(*mineOpts)
 	},
 }
 

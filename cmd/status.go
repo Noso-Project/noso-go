@@ -27,7 +27,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Noso-Project/noso-go/internal/miner-bak"
 	"github.com/spf13/cobra"
 )
 
@@ -89,7 +88,8 @@ Get status of a pool
 		poolOpts.IpPort = pool.opts.IpPort
 		poolOpts.PoolPw = pool.opts.PoolPw
 
-		miner.GetPoolStatus(poolOpts)
+		// TODO: add this back in
+		// miner.GetPoolStatus(poolOpts)
 	},
 }
 
