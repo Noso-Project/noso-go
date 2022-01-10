@@ -19,8 +19,13 @@ github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/klauspost/cpuid/v2 v2.0.4
+github.com/klauspost/cpuid/v2
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
+# github.com/minio/sha256-simd v1.0.0
+## explicit
+github.com/minio/sha256-simd
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir

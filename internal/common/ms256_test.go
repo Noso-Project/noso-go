@@ -200,6 +200,59 @@ func BenchmarkMsFast(b *testing.B) {
 	}
 }
 
+func BenchmarkMsSumBasic(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	val := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf11001"
+	for n := 0; n < b.N; n++ {
+		MultiStep256SumHash(val)
+	}
+}
+
+func BenchmarkMsSumFast(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf1"
+	next := []byte("1001")
+	hasher := NewMultiStep256Sum(seed)
+
+	for n := 0; n < b.N; n++ {
+		hasher.Hash(next)
+	}
+}
+
+func BenchmarkMsFastSearch(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf1"
+	next := "1001"
+	hasher := NewMultiStep256(seed)
+	targets := make([]string, 4)
+	targets[0] = "10011001"
+	targets[1] = "10011002"
+	targets[2] = "10011003"
+	targets[3] = "10011004"
+
+	for n := 0; n < b.N; n++ {
+		hasher.Hash(next)
+		hasher.Search(targets)
+	}
+}
+
+func BenchmarkMsSumFastSearch(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "1t0000NNNN4ExCj4NvjPUZBWzeHcoHWVBJoZfPEf1"
+	next := []byte("1001")
+	hasher := NewMultiStep256Sum(seed)
+	targets := make([][]byte, 4)
+	targets[0] = []byte("10011001")
+	targets[1] = []byte("10011002")
+	targets[2] = []byte("10011003")
+	targets[3] = []byte("10011004")
+
+	for n := 0; n < b.N; n++ {
+		hasher.Hash(next)
+		hasher.Search(targets)
+	}
+}
+
 func BenchmarkMsFastParallel(b *testing.B) {
 	b.Logf("b.N is: %d\n", b.N)
 
@@ -263,6 +316,20 @@ func BenchmarkSpeedTest1b(b *testing.B) {
 	hasher := sha256.New()
 	hasher.Write(seedByte)
 	for n := 0; n < b.N; n++ {
+		hasher.Sum(nil)
+	}
+}
+
+func BenchmarkSpeedTest1c(b *testing.B) {
+	b.Logf("b.N is: %d\n", b.N)
+	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp1"
+	seedByte := []byte(seed)
+	postByte := []byte("1001")
+	hasher := sha256.New()
+	for n := 0; n < b.N; n++ {
+		hasher.Reset()
+		hasher.Write(seedByte)
+		hasher.Write(postByte)
 		hasher.Sum(nil)
 	}
 }

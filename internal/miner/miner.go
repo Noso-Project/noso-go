@@ -27,13 +27,10 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 				solution  string
 			)
 
-			jobStart := time.Now()
-		jobLoop:
 			for job = range jobStream {
+				jobStart := time.Now()
 				hashCount := 0
 				// fmt.Printf("Pulled job: %+v\n", job)
-				// fmt.Printf("Pulled job after %s\n", time.Since(jobStart))
-				jobStart = time.Now()
 				hasher = common.NewMultiStep256(job.MinerSeed)
 
 				targetMin = (job.Diff / 10) + 1 - job.PoolDepth
@@ -50,17 +47,6 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 					// fmt.Println("Gen'd bytes:", valBytes)
 					// start := time.Now()
 					hashCount++
-					// fmt.Printf("Pulled val: %v\n", val)
-					// time.Sleep(time.Second)
-					// TODO: Might be more advantageous to check these on an interval than on every loop,
-					//       verify with a benchmark
-					select {
-					case <-ctx.Done():
-						return
-					case <-job.Done():
-						continue jobLoop
-					default:
-					}
 
 					// hasher.Reset()
 					h := hasher.HashTest(valBytes)
@@ -79,7 +65,7 @@ func MinerManagerNew(ctx context.Context, client *common.Client, broker *common.
 					}
 				}
 				stop := time.Now()
-				report := common.NewHashRateReport(fmt.Sprintf("Miner %2d", name), hashCount, jobStart, stop)
+				report := common.NewHashRateReport(fmt.Sprintf("Miner %2d", name), 2_383_280, jobStart, stop)
 				fmt.Printf("%s - %s\n", report.MinerName, report)
 			}
 		}(x)

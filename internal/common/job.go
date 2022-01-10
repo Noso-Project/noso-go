@@ -54,7 +54,7 @@ func allHashes() [][]byte {
 		var w, x, y, z rune
 		bytes := make([][]byte, 0)
 
-		for _, w = range hashChars[:5] {
+		for _, w = range hashChars[:10] {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
 					for _, z = range hashChars {

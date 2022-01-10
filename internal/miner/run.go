@@ -12,7 +12,7 @@ func Run(ctx context.Context) error {
 	defer cancel()
 
 	broker := common.NewBroker(ctx)
-	client := common.NewClient(ctx, broker, "localhost", 45678)
+	client := common.NewClient(ctx, broker, "pool.noso.dev", 8082)
 
 	var wg sync.WaitGroup
 
