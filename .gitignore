@@ -25,3 +25,4 @@ packages/README.md
 bin/README.md
 *.log
 *.txt
+NOSODATA/

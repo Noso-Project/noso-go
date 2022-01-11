@@ -1,23 +1,22 @@
 package miner
 
 import (
-	"log"
 	"math/rand"
 	"time"
-
-	"github.com/denisbrodbeck/machineid"
+	// "github.com/denisbrodbeck/machineid"
 )
 
 var deviceId = getMachineId()
 var instanceId = getInstanceId()
 
 func getMachineId() string {
-	id, err := machineid.ProtectedID("noso-go")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// id, err := machineid.ProtectedID("noso-go")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	return id[:6]
+	// return id[:6]
+	return "123456"
 }
 
 // From https://stackoverflow.com/a/22892986/4079962

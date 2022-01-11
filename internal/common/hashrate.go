@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -29,4 +30,18 @@ type HashRateReport struct {
 
 func (h HashRateReport) String() string {
 	return FormatHashRate(strconv.Itoa(h.HashRate))
+}
+
+func NewTotalHashRateReport(hashRate int) TotalHashRateReport {
+	return TotalHashRateReport{
+		TotalHashRate: hashRate,
+	}
+}
+
+type TotalHashRateReport struct {
+	TotalHashRate int
+}
+
+func (h TotalHashRateReport) String() string {
+	return fmt.Sprintf("Total Hash Rate: %s", FormatHashRate(strconv.Itoa(h.TotalHashRate)))
 }

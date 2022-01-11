@@ -3,21 +3,22 @@ package common
 import (
 	"math/rand"
 	"time"
-
-	"github.com/denisbrodbeck/machineid"
+	// "github.com/denisbrodbeck/machineid"
 )
 
 var deviceId = getMachineId()
 var instanceId = getInstanceId()
 
 func getMachineId() string {
-	id, err := machineid.ProtectedID("noso-go")
-	if err != nil {
-		// log.Error(err)
-		id = "123456"
-	}
+	// TODO: Add this back in with a recover() to catch panics on android phones
+	// id, err := machineid.ProtectedID("noso-go")
+	// if err != nil {
+	// 	// log.Error(err)
+	// 	id = "123456"
+	// }
 
-	return id[:6]
+	// return id[:6]
+	return "12345"
 }
 
 // From https://stackoverflow.com/a/22892986/4079962

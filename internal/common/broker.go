@@ -27,6 +27,8 @@ func (t Topic) String() string {
 		return "SolutionTopic"
 	case JobTopic:
 		return "JobTopic"
+	case HashRateTopic:
+		return "HashRateTopic"
 	default:
 		return fmt.Sprintf("%d (cant find string)", int(t))
 	}
@@ -40,6 +42,7 @@ const (
 	PoolStepsTopic
 	SolutionTopic
 	StepOkTopic
+	HashRateTopic
 )
 
 var (
@@ -88,6 +91,7 @@ func (b *Broker) start(ctx context.Context, wg *sync.WaitGroup) {
 	subs := make(map[Topic][]chan interface{})
 	subs[JoinTopic] = make([]chan interface{}, 0)
 	subs[PingPongTopic] = make([]chan interface{}, 0)
+	subs[HashRateTopic] = make([]chan interface{}, 0)
 	for {
 		select {
 		case <-ctx.Done():
@@ -192,6 +196,8 @@ func findTopics(msg interface{}) ([]Topic, error) {
 		return []Topic{JobTopic}, nil
 	case JobStreamReq:
 		return []Topic{JobTopic}, nil
+	case HashRateReport, TotalHashRateReport:
+		return []Topic{HashRateTopic}, nil
 	default:
 		// TODO: Rethink how I'm doing this
 		logger.Debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")

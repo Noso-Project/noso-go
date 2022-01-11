@@ -382,14 +382,27 @@ func (c *Client) ping(ctx context.Context, cancel context.CancelFunc, wg *sync.W
 	case <-c.Joined():
 	}
 
+	time.Sleep(time.Second)
+	hashReportStream, _ := c.subscribe(ctx, HashRateTopic)
+
 	ticker := time.NewTicker(c.pingInterval)
+	totalHashRate := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			// TODO: Need to use real hash rate value here instead of zero
-			c.Send(ctx, "PING 0")
+			c.Send(ctx, fmt.Sprintf("PING %d", int(totalHashRate/1000)))
+		case h, ok := <-hashReportStream:
+			if !ok {
+				panic("hashReportStream closed unexpectidly")
+			}
+			switch h.(type) {
+			case TotalHashRateReport:
+				totalHashRate = h.(TotalHashRateReport).TotalHashRate
+			}
+
 		}
 	}
 }

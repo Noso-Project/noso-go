@@ -417,7 +417,7 @@ func BenchmarkSpeedTest3c(b *testing.B) {
 
 func BenchmarkSpeedTest4a(b *testing.B) {
 	b.Logf("b.N is: %d\n", b.N)
-	hashes := allHashes()
+	hashes := AllHashes()
 	hashesLen := len(hashes)
 	seed := "3p0000000N6VxgLSpbni8kLbyUAjYXdHCPt2VEp11001"
 	buff := bytes.NewBufferString(seed)

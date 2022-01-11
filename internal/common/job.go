@@ -32,7 +32,7 @@ func (j *Job) Gen(ctx context.Context) <-chan string {
 		defer close(stream)
 		// 5 was chosen so that it would take roughly 1 second to iterate
 		// through all the hashes on one modern-ish cpu thread
-		for _, w = range HashableSeedChars[:5] {
+		for _, w = range HashableSeedChars[:60] {
 			for _, x = range HashableSeedChars {
 				for _, y = range HashableSeedChars {
 					for _, z = range HashableSeedChars {
@@ -47,30 +47,30 @@ func (j *Job) Gen(ctx context.Context) <-chan string {
 
 const hashChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-var AllHashes [][]byte
+var allHashes [][]byte
 
-func allHashes() [][]byte {
-	if AllHashes == nil {
+func AllHashes() [][]byte {
+	if allHashes == nil {
 		var w, x, y, z rune
-		bytes := make([][]byte, 0)
+		b := make([][]byte, 0)
 
 		for _, w = range hashChars[:10] {
 			for _, x = range hashChars {
 				for _, y = range hashChars {
 					for _, z = range hashChars {
-						bytes = append(bytes, []byte(fmt.Sprintf("%c%c%c%c", w, x, y, z)))
+						b = append(b, []byte(fmt.Sprintf("%c%c%c%c", w, x, y, z)))
 					}
 				}
 			}
 		}
-		AllHashes = bytes
+		allHashes = b
 	}
 
-	return AllHashes
+	return allHashes
 }
 
 func (j *Job) GenBytes(ctx context.Context) <-chan []byte {
-	hashes := allHashes()
+	hashes := AllHashes()
 	stream := make(chan []byte, 0)
 	go func() {
 		defer close(stream)
